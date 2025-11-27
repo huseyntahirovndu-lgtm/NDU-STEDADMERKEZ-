@@ -1,7 +1,7 @@
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useCallback, useRef, Suspense, ChangeEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense, ChangeEvent, useMemo } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -50,7 +50,7 @@ const profileSchema = z.object({
   major: z.string().min(2, "İxtisas boş ola bilməz."),
   courseYear: z.coerce.number().min(1, "Təhsil ilini seçin.").max(6),
   educationForm: z.string().optional(),
-  gpa: z.coerce.number({invalid_type_error: "ÜOMG mütləq qeyd edilməlidir."}).min(0, "ÜOMG 0-dan az ola bilməz.").max(100, "ÜOMG 100-dən çox ola bilməz."),
+  gpa: z.coerce.number({invalid_type_error: "ÜOMG mütləq qeyd edilməlidir."}).min(0, "ÜOMG 0-dan az ola bilməz.").max(100, "ÜOMG 100-dən çox ola bilməz.").optional().nullable(),
   skills: z.array(skillSchema).optional(),
   successStory: z.string().optional(),
   linkedInURL: z.string().url().or(z.literal('')).optional(),
@@ -102,10 +102,14 @@ function EditProfilePageComponent() {
   const [zoom, setZoom] = useState(1.2);
   
   const editorRef = useRef<AvatarEditor>(null);
+  
   const userIdFromQuery = searchParams.get('userId');
 
   const userIdToFetch = useMemo(() => {
-    return currentUser?.role === 'admin' && userIdFromQuery ? userIdFromQuery : currentUser?.id;
+    if (currentUser?.role === 'admin' && userIdFromQuery) {
+        return userIdFromQuery;
+    }
+    return currentUser?.id;
   }, [currentUser, userIdFromQuery]);
   
   const userDocRef = useMemoFirebase(() => 
@@ -137,7 +141,6 @@ function EditProfilePageComponent() {
 
   const triggerTalentScoreUpdate = useCallback(async (userId: string) => {
     if (!firestore) return;
-    console.log("Starting talent score update for", userId);
     try {
         const allUsersSnapshot = await getDocs(query(collection(firestore, 'users'), where('role', '==', 'student')));
         
@@ -162,7 +165,8 @@ function EditProfilePageComponent() {
         }));
 
         if (allStudentsContext.length === 0) {
-            throw new Error("No students found to compare against.");
+            console.warn("No students found to compare against for talent score calculation.");
+            return;
         }
         
         const scoreResult = await calculateTalentScore({
@@ -173,10 +177,9 @@ function EditProfilePageComponent() {
         const targetUserDoc = doc(firestore, 'users', userId);
         await updateDocumentNonBlocking(targetUserDoc, { talentScore: scoreResult.talentScore });
 
-        toast({ title: "İstedad Balınız Yeniləndi!", description: `Yeni istedad balınız: ${scoreResult.talentScore}.` });
+        toast({ title: "İstedad Balınız Yeniləndi!", description: `Arxa planda hesablanan yeni balınız: ${scoreResult.talentScore}.` });
     } catch (error: any) {
-        console.error("Error updating talent score:", error);
-        toast({ variant: "destructive", title: "Xəta", description: `İstedad balını arxa planda yeniləyərkən xəta baş verdi.` });
+        console.error("Error updating talent score in background:", error);
     }
   }, [firestore, toast]);
   
@@ -220,7 +223,7 @@ function EditProfilePageComponent() {
         major: targetUser.major || '',
         courseYear: targetUser.courseYear || 1,
         educationForm: targetUser.educationForm || '',
-        gpa: targetUser.gpa || 0,
+        gpa: targetUser.gpa || null,
         skills: targetUser.skills || [],
         successStory: targetUser.successStory || '',
         linkedInURL: targetUser.linkedInURL || '',
@@ -302,7 +305,7 @@ function EditProfilePageComponent() {
     const updateData: { [key: string]: any } = { ...data };
     updateData.gpa = Number(updateData.gpa) || 0;
     
-    updateDocumentNonBlocking(userDocRef, updateData);
+    await updateDocumentNonBlocking(userDocRef, updateData);
 
     if (currentUser && currentUser.id === targetUser.id) {
       updateUser(updateData);
@@ -314,10 +317,10 @@ function EditProfilePageComponent() {
     triggerTalentScoreUpdate(targetUser.id);
   };
   
-  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = (data) => {
+  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = async (data) => {
     if (!targetUser || !firestore) return;
     const projectCollectionRef = collection(firestore, `projects`);
-    addDocumentNonBlocking(projectCollectionRef, { 
+    await addDocumentNonBlocking(projectCollectionRef, { 
       ...data, 
       studentId: targetUser.id, 
       ownerType: 'student',
@@ -329,10 +332,10 @@ function EditProfilePageComponent() {
     triggerTalentScoreUpdate(targetUser.id); 
   };
   
-  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = (data) => {
+  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = async (data) => {
     if (!targetUser || !firestore) return;
     const achievementCollectionRef = collection(firestore, `achievements`);
-    addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: targetUser.id });
+    await addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: targetUser.id });
     achievementForm.reset();
     toast({ title: "Nailiyyət əlavə edildi" });
     triggerTalentScoreUpdate(targetUser.id);
@@ -359,7 +362,7 @@ function EditProfilePageComponent() {
     }
 
     const certificateCollectionRef = collection(firestore, `users/${targetUser.id}/certificates`);
-    addDocumentNonBlocking(certificateCollectionRef, { ...data, certificateURL: finalCertificateURL, studentId: targetUser.id });
+    await addDocumentNonBlocking(certificateCollectionRef, { ...data, certificateURL: finalCertificateURL, studentId: targetUser.id });
     
     certificateForm.reset();
     if(fileInput) fileInput.value = '';
@@ -385,7 +388,7 @@ function EditProfilePageComponent() {
             break;
       }
       
-      deleteDocumentNonBlocking(docRef);
+      await deleteDocumentNonBlocking(docRef);
 
       toast({ title: "Element silindi", description: "Seçilmiş element uğurla silindi." });
       triggerTalentScoreUpdate(targetUser.id);
@@ -397,7 +400,7 @@ function EditProfilePageComponent() {
         const newSkill: Skill = { name: trimmedInput, level: skillLevel };
         const currentSkills = profileForm.getValues('skills') || [];
         if (!currentSkills.some(s => s && s.name && s.name.toLowerCase() === newSkill.name.toLowerCase())) {
-            setProfileValue('skills', [...currentSkills, newSkill], { shouldValidate: true });
+            setProfileValue('skills', [...currentSkills, newSkill], { shouldValidate: true, shouldDirty: true });
             setSkillInput('');
             setSkillLevel('Başlanğıc');
             skillInputRef.current?.focus();
@@ -541,7 +544,7 @@ function EditProfilePageComponent() {
                     <FormField name="gpa" control={profileForm.control} render={({ field }) => (
                       <FormItem>
                         <FormLabel>Keçən ilki ÜOMG (GPA)</FormLabel>
-                        <FormControl><Input type="number" step="0.1" {...field} placeholder="Məs: 85.5" /></FormControl>
+                        <FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ''} placeholder="Məs: 85.5" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -852,3 +855,5 @@ export default function EditProfilePage() {
     </Suspense>
   )
 }
+
+    
