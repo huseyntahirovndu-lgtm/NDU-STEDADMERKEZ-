@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Library,
   Users,
+  RefreshCw
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -26,13 +27,20 @@ import Link from "next/link";
 import { Student, StudentOrganization } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { students as allStudents, studentOrganizations as allStudentOrgs } from "@/lib/placeholder-data";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { syncDataAction } from "./action";
+import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminDashboard() {
   const { user: adminUser, loading: adminLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentOrgs, setStudentOrgs] = useState<StudentOrganization[]>([]);
   const [recentStudents, setRecentStudents] = useState<Student[]>([]);
+  
+  const [syncedData, setSyncedData] = useState<string | null>(null);
+  const [isSyncing, startSyncTransition] = useTransition();
+  const { toast } = useToast();
 
   const isLoading = adminLoading;
 
@@ -44,6 +52,18 @@ export default function AdminDashboard() {
         setRecentStudents(sortedStudents.slice(0, 5));
     }
   }, [adminUser]);
+
+  const handleSync = () => {
+    startSyncTransition(async () => {
+        const result = await syncDataAction();
+        if(result.success) {
+            setSyncedData(result.data);
+            toast({ title: "Sinxronizasiya Uğurlu Oldu", description: "Lokal məlumatlar üçün kod aşağıda göstərildi. Kopyalayıb placeholder-data.ts faylına yerləşdirin."})
+        } else {
+            toast({ variant: 'destructive', title: "Sinxronizasiya Xətası", description: result.error });
+        }
+    })
+  }
 
   if (isLoading) {
     return (
@@ -62,7 +82,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -91,7 +111,43 @@ export default function AdminDashboard() {
               </p>
             </CardContent>
           </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                Sistem Sinxronizasiyası
+                 <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-xs text-muted-foreground mb-2">
+                    Firebase-dəki məlumatları lokal məlumat faylına köçürmək üçün sinxronizasiya edin.
+                </p>
+               <Button onClick={handleSync} disabled={isSyncing} className="w-full">
+                {isSyncing ? 'Sinxronizasiya edilir...' : 'Məlumatları Sinxronizasiya Et'}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
+        
+        {syncedData && (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Sinxronizasiya Nəticəsi</CardTitle>
+                    <CardDescription>Aşağıdakı kodu kopyalayıb `src/lib/placeholder-data.ts` faylının məzmunu ilə tam əvəz edin.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Textarea 
+                        readOnly
+                        value={syncedData}
+                        className="h-96 font-mono text-xs"
+                    />
+                    <Button onClick={() => navigator.clipboard.writeText(syncedData)} className="mt-2">
+                        Kodu Kopyala
+                    </Button>
+                </CardContent>
+            </Card>
+        )}
+
         <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
           <Card className="xl:col-span-2">
             <CardHeader className="flex flex-row items-center">
