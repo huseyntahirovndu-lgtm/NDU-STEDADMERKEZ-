@@ -19,6 +19,8 @@ import {
   Achievement,
   Certificate,
   AchievementLevel,
+  Skill,
+  SkillLevel,
 } from '@/types';
 import { calculateTalentScore } from '@/app/actions';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,9 @@ import {
   Award,
   Briefcase,
   FileText,
+  User as UserIcon,
+  X,
+  Upload,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -66,6 +71,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import {
   collection,
@@ -78,14 +84,59 @@ import {
 import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import AvatarEditor from 'react-avatar-editor';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
+const skillSchema = z.object({
+  name: z.string().min(1, 'Bacarıq adı boş ola bilməz.'),
+  level: z.enum(['Başlanğıc', 'Orta', 'İrəli']),
+});
+
+const profileSchema = z.object({
+  firstName: z.string().min(2, 'Ad ən azı 2 hərf olmalıdır.'),
+  lastName: z.string().min(2, 'Soyad ən azı 2 hərf olmalıdır.'),
+  major: z.string().min(2, 'İxtisas boş ola bilməz.'),
+  courseYear: z.coerce.number().min(1, 'Təhsil ilini seçin.').max(6),
+  educationForm: z.string().optional(),
+  gpa: z
+    .coerce
+    .number({ invalid_type_error: 'ÜOMG mütləq qeyd edilməlidir.' })
+    .min(0, 'ÜOMG 0-dan az ola bilməz.')
+    .max(100, 'ÜOMG 100-dən çox ola bilməz.')
+    .optional()
+    .nullable(),
+  skills: z.array(skillSchema).optional(),
+  successStory: z.string().optional(),
+  linkedInURL: z.string().url().or(z.literal('')).optional(),
+  githubURL: z.string().url().or(z.literal('')).optional(),
+  behanceURL: z.string().url().or(z.literal('')).optional(),
+  instagramURL: z.string().url().or(z.literal('')).optional(),
+  portfolioURL: z.string().url().or(z.literal('')).optional(),
+  googleScholarURL: z.string().url().or(z.literal('')).optional(),
+  youtubeURL: z.string().url().or(z.literal('')).optional(),
+});
 
 const projectSchema = z.object({
   title: z.string().min(3, 'Layihə adı boş ola bilməz.'),
   description: z.string().min(10, 'Təsvir ən azı 10 hərf olmalıdır.'),
   role: z.string().min(2, 'Rol boş ola bilməz.'),
-  teamMembersRaw: z.string().optional(),
+  teamMembersRaw: z.string().optional(), 
   link: z.string().url().or(z.literal('')),
   status: z.enum(['davam edir', 'tamamlanıb']),
 });
@@ -109,15 +160,29 @@ const certificateSchema = z.object({
   level: z.enum(['Beynəlxalq', 'Respublika', 'Regional', 'Universitet']),
 });
 
+const SKILL_LEVELS: SkillLevel[] = ['Başlanğıc', 'Orta', 'İrəli'];
 
 function EditProfilePageComponent() {
-  const { user: currentUser, loading: authLoading } = useAuth();
+  const { user: currentUser, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // States for profile picture editor
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1.2);
+  const [localProfilePicUrl, setLocalProfilePicUrl] = useState<string | null>(null);
+  const [newProfilePicBlob, setNewProfilePicBlob] = useState<Blob | null>(null);
+
+
+  const editorRef = useRef<AvatarEditor>(null);
+  const skillInputRef = useRef<HTMLInputElement>(null);
+  const profilePictureInputRef = useRef<HTMLInputElement>(null);
   const certificateFileInputRef = useRef<HTMLInputElement>(null);
 
   const userIdFromQuery = searchParams.get('userId');
@@ -173,6 +238,14 @@ function EditProfilePageComponent() {
   const { data: certificates, isLoading: certificatesLoading } =
     useCollection<Certificate>(certificatesQuery);
 
+  const [skillInput, setSkillInput] = useState('');
+  const [skillLevel, setSkillLevel] = useState<SkillLevel>('Başlanğıc');
+
+  const profileForm = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    mode: 'onChange',
+  });
+
   const projectForm = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -201,6 +274,35 @@ function EditProfilePageComponent() {
     resolver: zodResolver(certificateSchema),
     defaultValues: { name: '', level: 'Universitet', certificateURL: '' },
   });
+
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, authLoading, router]);
+
+  useEffect(() => {
+    if (targetUser) {
+      profileForm.reset({
+        firstName: targetUser.firstName || '',
+        lastName: targetUser.lastName || '',
+        major: targetUser.major || '',
+        courseYear: targetUser.courseYear || 1,
+        educationForm: targetUser.educationForm || '',
+        gpa: targetUser.gpa ?? null,
+        skills: targetUser.skills || [],
+        successStory: targetUser.successStory || '',
+        linkedInURL: targetUser.linkedInURL || '',
+        githubURL: targetUser.githubURL || '',
+        behanceURL: targetUser.behanceURL || '',
+        instagramURL: targetUser.instagramURL || '',
+        portfolioURL: targetUser.portfolioURL || '',
+        googleScholarURL: targetUser.googleScholarURL || '',
+        youtubeURL: targetUser.youtubeURL || '',
+      });
+      setLocalProfilePicUrl(targetUser.profilePictureUrl || null);
+    }
+  }, [targetUser, profileForm]);
 
   const triggerTalentScoreUpdate = useCallback(
     async (userId: string) => {
@@ -252,7 +354,7 @@ function EditProfilePageComponent() {
         });
 
         const targetUserDoc = doc(firestore, 'users', userId);
-        await addDocumentNonBlocking(targetUserDoc, {
+        await updateDocumentNonBlocking(targetUserDoc, {
           talentScore: scoreResult.talentScore,
         });
 
@@ -267,14 +369,8 @@ function EditProfilePageComponent() {
     [firestore, toast]
   );
 
-  useEffect(() => {
-    if (!authLoading && !currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, authLoading, router]);
-
   const handleFileUpload = async (
-    file: File,
+    file: File | Blob,
     type: 'sekil' | 'sened'
   ): Promise<string | null> => {
     setIsUploading(true);
@@ -304,6 +400,66 @@ function EditProfilePageComponent() {
     }
   };
 
+  const onProfilePictureChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageSrc(URL.createObjectURL(file));
+      setEditorOpen(true);
+    }
+    e.target.value = '';
+  };
+
+  const handleSaveCroppedImage = async () => {
+    if (editorRef.current) {
+      const canvas = editorRef.current.getImageScaledToCanvas();
+      setLocalProfilePicUrl(canvas.toDataURL());
+      canvas.toBlob((blob) => {
+        if (blob) {
+          setNewProfilePicBlob(blob);
+        }
+      }, 'image/jpeg');
+      setEditorOpen(false);
+      setImageSrc(null);
+    }
+  };
+
+  const onProfileSubmit: SubmitHandler<z.infer<typeof profileSchema>> = async (
+    data
+  ) => {
+    if (!targetUser || !userDocRef) return;
+    setIsSaving(true);
+
+    let finalProfilePicUrl = localProfilePicUrl;
+    if (newProfilePicBlob) {
+      const uploadedUrl = await handleFileUpload(newProfilePicBlob, 'sekil');
+      if (uploadedUrl) {
+        finalProfilePicUrl = uploadedUrl;
+      } else {
+        setIsSaving(false);
+        return; // Stop saving if upload fails
+      }
+    }
+
+    const payload = {
+      ...data,
+      profilePictureUrl: finalProfilePicUrl || '',
+      gpa: Number(data.gpa) || 0,
+    };
+
+    await updateDocumentNonBlocking(userDocRef, payload);
+
+    if (currentUser && currentUser.id === targetUser.id) {
+      updateUser({
+        ...currentUser,
+        ...payload,
+      });
+    }
+
+    toast({ title: 'Profil məlumatları yadda saxlanıldı.' });
+    setIsSaving(false);
+    setNewProfilePicBlob(null);
+    triggerTalentScoreUpdate(targetUser.id);
+  };
 
   const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = async (
     data
@@ -319,9 +475,7 @@ function EditProfilePageComponent() {
           .filter(Boolean)
       : [];
 
-    const projectCollectionRef = collection(firestore, `projects`);
-
-    await addDocumentNonBlocking(projectCollectionRef, {
+    await addDocumentNonBlocking(collection(firestore, 'projects'), {
       ...rest,
       studentId: userIdToFetch,
       ownerType: 'student',
@@ -330,15 +484,7 @@ function EditProfilePageComponent() {
       invitedStudentIds: [],
     });
 
-    projectForm.reset({
-      title: '',
-      description: '',
-      role: '',
-      teamMembersRaw: '',
-      link: '',
-      status: 'davam edir',
-    });
-
+    projectForm.reset();
     toast({ title: 'Layihə əlavə edildi' });
     triggerTalentScoreUpdate(userIdToFetch);
   };
@@ -347,8 +493,7 @@ function EditProfilePageComponent() {
     z.infer<typeof achievementSchema>
   > = async (data) => {
     if (!userIdToFetch || !firestore) return;
-    const achievementCollectionRef = collection(firestore, `achievements`);
-    await addDocumentNonBlocking(achievementCollectionRef, {
+    await addDocumentNonBlocking(collection(firestore, 'achievements'), {
       ...data,
       studentId: userIdToFetch,
     });
@@ -380,19 +525,17 @@ function EditProfilePageComponent() {
       return;
     }
 
-    const certificateCollectionRef = collection(
-      firestore,
-      `users/${userIdToFetch}/certificates`
+    await addDocumentNonBlocking(
+      collection(firestore, `users/${userIdToFetch}/certificates`),
+      {
+        ...data,
+        certificateURL: finalCertificateURL,
+        studentId: userIdToFetch,
+      }
     );
-    await addDocumentNonBlocking(certificateCollectionRef, {
-      ...data,
-      certificateURL: finalCertificateURL,
-      studentId: userIdToFetch,
-    });
 
     certificateForm.reset();
     if (fileInput) fileInput.value = '';
-
     toast({ title: 'Sertifikat əlavə edildi' });
     triggerTalentScoreUpdate(userIdToFetch);
   };
@@ -418,13 +561,47 @@ function EditProfilePageComponent() {
           docId
         );
         break;
-      default:
-        return;
     }
 
     await deleteDocumentNonBlocking(docRef);
     toast({ title: 'Element silindi' });
     triggerTalentScoreUpdate(userIdToFetch);
+  };
+
+  const handleSkillAdd = () => {
+    const trimmedInput = skillInput.trim();
+    if (trimmedInput) {
+      const newSkill: Skill = { name: trimmedInput, level: skillLevel };
+      const currentSkills = profileForm.getValues('skills') || [];
+      if (
+        !currentSkills.some(
+          (s) => s?.name?.toLowerCase() === newSkill.name.toLowerCase()
+        )
+      ) {
+        profileForm.setValue('skills', [...currentSkills, newSkill], {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setSkillInput('');
+        setSkillLevel('Başlanğıc');
+        skillInputRef.current?.focus();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Bu bacarıq artıq mövcuddur.',
+        });
+      }
+    }
+  };
+
+  const handleSkillRemove = (skillToRemove: string) => {
+    profileForm.setValue(
+      'skills',
+      (profileForm.getValues('skills') || []).filter(
+        (skill) => skill.name !== skillToRemove
+      ),
+      { shouldValidate: true, shouldDirty: true }
+    );
   };
 
   if (authLoading || userLoading)
@@ -438,8 +615,56 @@ function EditProfilePageComponent() {
       </div>
     );
 
+  const getInitials = (firstName?: string, lastName?: string) =>
+    `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
+
   return (
     <>
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profil Şəklini Tənzimlə</DialogTitle>
+            <DialogDescription>
+              Şəkli yaxınlaşdırın və çərçivəyə uyğunlaşdırın.
+            </DialogDescription>
+          </DialogHeader>
+          {imageSrc && (
+            <div className="flex flex-col items-center gap-4">
+              <AvatarEditor
+                ref={editorRef}
+                image={imageSrc}
+                width={250}
+                height={250}
+                border={50}
+                borderRadius={125}
+                color={[0, 0, 0, 0.6]}
+                scale={zoom}
+                rotate={0}
+              />
+              <div className="w-full max-w-xs space-y-2">
+                <Label htmlFor="zoom">Yaxınlaşdırma</Label>
+                <Slider
+                  id="zoom"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={[zoom]}
+                  onValueChange={(value) => setZoom(value[0])}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+              Ləğv et
+            </Button>
+            <Button onClick={handleSaveCroppedImage} disabled={isUploading}>
+              {isUploading ? 'Yüklənir...' : 'Təsdiq Et'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto max-w-4xl py-8 md:py-12 px-4">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
@@ -452,6 +677,391 @@ function EditProfilePageComponent() {
         </div>
 
         <div className="space-y-8">
+          {/* Main Profile Form Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon /> Şəxsi Məlumatlar
+              </CardTitle>
+              <CardDescription>
+                Əsas profil məlumatlarınızı, bacarıqlarınızı və sosial media
+                hesablarınızı yeniləyin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form
+                  onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+                  className="space-y-6"
+                >
+                  <FormItem>
+                    <FormLabel>Profil Şəkli</FormLabel>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage
+                          src={localProfilePicUrl || targetUser.profilePictureUrl}
+                        />
+                        <AvatarFallback>
+                          {getInitials(
+                            targetUser.firstName,
+                            targetUser.lastName
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <Button
+                        type="button"
+                        onClick={() =>
+                          profilePictureInputRef.current?.click()
+                        }
+                        disabled={isUploading}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {isUploading ? 'Yüklənir...' : 'Şəkil Dəyiş'}
+                      </Button>
+                      <Input
+                        ref={profilePictureInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={onProfilePictureChange}
+                      />
+                    </div>
+                  </FormItem>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField
+                      name="firstName"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ad</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="lastName"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Soyad</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      name="major"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>İxtisas</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="courseYear"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Təhsil ili</FormLabel>
+                          <Select
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value, 10))
+                            }
+                            value={String(field.value)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Təhsil ilini seçin" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {[1, 2, 3, 4, 5, 6].map((y) => (
+                                <SelectItem key={y} value={String(y)}>
+                                  {y}-ci kurs
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      name="educationForm"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Təhsil Forması (Könüllü)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Əyani / Qiyabi" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="gpa"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Keçən ilki ÜOMG (Könüllü)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              {...field}
+                              value={field.value ?? ''}
+                              placeholder="Məs: 85.5"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <Separator />
+                  <h3 className="text-lg font-medium">Bacarıqlar</h3>
+
+                  <FormField
+                    name="skills"
+                    control={profileForm.control}
+                    render={() => (
+                      <FormItem>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
+                           <div className="flex-grow w-full">
+                            <FormLabel>Bacarıq adı</FormLabel>
+                            <Input
+                                ref={skillInputRef}
+                                value={skillInput}
+                                onChange={(e) => setSkillInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSkillAdd();
+                                }
+                                }}
+                                placeholder="Məs: Python, Figma"
+                            />
+                           </div>
+                           <div className="w-full sm:w-auto">
+                             <FormLabel>Səviyyə</FormLabel>
+                            <Select
+                              value={skillLevel}
+                              onValueChange={(value) =>
+                                setSkillLevel(value as SkillLevel)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Səviyyə seçin" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SKILL_LEVELS.map((level) => (
+                                  <SelectItem key={level} value={level}>
+                                    {level}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                           </div>
+                           <Button
+                              type="button"
+                              onClick={handleSkillAdd}
+                              className="w-full sm:w-auto shrink-0"
+                            >
+                              Əlavə et
+                            </Button>
+                        </div>
+                        <FormMessage />
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {profileForm.watch('skills')?.map((skill) => (
+                            <Badge
+                              key={skill.name}
+                              variant="secondary"
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              {skill.name}{' '}
+                              <span className="text-xs opacity-70">
+                                ({skill.level})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSkillRemove(skill.name)
+                                }
+                                className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <Separator />
+                  <h3 className="text-lg font-medium">Uğur Hekayəsi (Könüllü)</h3>
+
+                  <FormField
+                    control={profileForm.control}
+                    name="successStory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hekayəniz</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..."
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                         <FormDescription>
+                            Bu hekayə ana səhifədə nümayiş oluna bilər.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Separator />
+                  <h3 className="text-lg font-medium">Sosial Linklər (Könüllü)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name="linkedInURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>LinkedIn URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://linkedin.com/in/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="githubURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GitHub URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://github.com/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="behanceURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Behance URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://behance.net/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="instagramURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Instagram URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://instagram.com/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="portfolioURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Portfolio URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://sizin-saytiniz.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="googleScholarURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Google Scholar URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://scholar.google.com/citations?user=..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="youtubeURL"
+                    control={profileForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>YouTube URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://youtube.com/channel/..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  </div>
+
+                  <div className="pt-4">
+                    <Button type="submit" disabled={isSaving || isUploading}>
+                      {isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+
           {/* Projects Card */}
           <Card>
             <CardHeader>
@@ -499,7 +1109,7 @@ function EditProfilePageComponent() {
                     control={projectForm.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Komanda Üzvləri</FormLabel>
+                        <FormLabel>Komanda Üzvləri (Könüllü)</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -571,7 +1181,7 @@ function EditProfilePageComponent() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isUploading}>
+                  <Button type="submit" disabled={isSaving || isUploading}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Layihə Əlavə Et
                   </Button>
@@ -583,8 +1193,8 @@ function EditProfilePageComponent() {
               <div className="space-y-4">
                 {projectsLoading ? (
                   <p>Yüklənir...</p>
-                ) : (
-                  projects?.map((p) => (
+                ) : projects && projects.length > 0 ? (
+                  projects.map((p) => (
                     <div
                       key={p.id}
                       className="flex justify-between items-center p-2 border rounded-md"
@@ -619,6 +1229,8 @@ function EditProfilePageComponent() {
                       </AlertDialog>
                     </div>
                   ))
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">Heç bir layihə əlavə edilməyib.</p>
                 )}
               </div>
             </CardContent>
@@ -748,7 +1360,7 @@ function EditProfilePageComponent() {
                       )}
                     />
                   </div>
-                  <Button type="submit" disabled={isUploading}>
+                  <Button type="submit" disabled={isSaving || isUploading}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nailiyyət Əlavə Et
                   </Button>
@@ -760,8 +1372,8 @@ function EditProfilePageComponent() {
               <div className="space-y-4">
                 {achievementsLoading ? (
                   <p>Yüklənir...</p>
-                ) : (
-                  achievements?.map((a) => (
+                ) : achievements && achievements.length > 0 ? (
+                  achievements.map((a) => (
                     <div
                       key={a.id}
                       className="flex justify-between items-center p-2 border rounded-md"
@@ -800,6 +1412,8 @@ function EditProfilePageComponent() {
                       </AlertDialog>
                     </div>
                   ))
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">Heç bir nailiyyət əlavə edilməyib.</p>
                 )}
               </div>
             </CardContent>
@@ -835,8 +1449,8 @@ function EditProfilePageComponent() {
                     )}
                   />
                   <FormItem>
-                    <FormLabel>Sertifikat Faylı</FormLabel>
-                    <FormControl>
+                    <FormLabel>Sertifikat Faylı və ya Linki</FormLabel>
+                     <FormControl>
                       <Input
                         type="file"
                         ref={certificateFileInputRef}
@@ -844,8 +1458,22 @@ function EditProfilePageComponent() {
                         disabled={isUploading}
                       />
                     </FormControl>
-                    <FormMessage />
+                     <FormDescription>
+                        Fayl yükləyə və ya aşağıdakı xanaya link daxil edə bilərsiniz.
+                     </FormDescription>
                   </FormItem>
+                   <FormField
+                    name="certificateURL"
+                    control={certificateForm.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="url" {...field} placeholder="Və ya link daxil edin" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     name="level"
                     control={certificateForm.control}
@@ -880,7 +1508,7 @@ function EditProfilePageComponent() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isUploading}>
+                  <Button type="submit" disabled={isSaving || isUploading}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Sertifikat Əlavə Et
                   </Button>
@@ -892,8 +1520,8 @@ function EditProfilePageComponent() {
               <div className="space-y-4">
                 {certificatesLoading ? (
                   <p>Yüklənir...</p>
-                ) : (
-                  certificates?.map((c) => (
+                ) : certificates && certificates.length > 0 ? (
+                  certificates.map((c) => (
                     <div
                       key={c.id}
                       className="flex justify-between items-center p-2 border rounded-md"
@@ -937,6 +1565,8 @@ function EditProfilePageComponent() {
                       </AlertDialog>
                     </div>
                   ))
+                ) : (
+                     <p className="text-sm text-muted-foreground text-center py-4">Heç bir sertifikat əlavə edilməyib.</p>
                 )}
               </div>
             </CardContent>
