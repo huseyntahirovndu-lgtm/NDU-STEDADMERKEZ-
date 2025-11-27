@@ -509,6 +509,7 @@ export const students: Student[] = [
     id: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
   },
   {
+    githubURL: "",
     certificateIds: [],
     createdAt: "2025-11-24T12:16:07.362Z",
     faculty: "Tibb fakültəsi",
@@ -528,8 +529,7 @@ export const students: Student[] = [
     talentScore: 10,
     status: "gözləyir",
     skills: [],
-    role: "student",
-    githubURL: ""
+    role: "student"
   },
   {
     profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-541bf3bc.jpg",
@@ -809,7 +809,7 @@ export const students: Student[] = [
     linkedInURL: null,
     profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-856ff7cc.jpg",
     createdAt: "2025-11-24T10:05:21.788Z",
-    status: null,
+    status: "təsdiqlənmiş",
     instagramURL: null,
     lastName: "Tahirov",
     behanceURL: null
@@ -1212,6 +1212,7 @@ export const students: Student[] = [
     role: "student"
   },
   {
+    certificateIds: [],
     linkedInURL: "",
     major: "Dövlət və ictimai münasibətlər",
     createdAt: "2025-11-24T17:22:13.328Z",
@@ -1490,7 +1491,7 @@ export const students: Student[] = [
     skills: [
       {
         level: "İrəli",
-        name: "Fortepiano\'da ifa etmək"
+        name: "Fortepiano'da ifa etmək"
       },
       {
         name: "Səhnədə çıxış etmək, obraz yaratmaq, ifadəli və emosional danışmaq",
@@ -2115,7 +2116,7 @@ export const certificates: Certificate[] = [
     id: "8tMlAzFUwJruL73BY4Dy",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    name: "Burnout :Tükənmişlik sindiromu və mübarizə strategiyaları",
+    name: "Şüuraltı zəifləmədə doğru bilinən səhvlər",
     certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250726-wa0296-be7cff56.jpg"
   },
   {
@@ -2200,7 +2201,7 @@ export const certificates: Certificate[] = [
     name: "Müəllim Missiyası və Milli Dəyərlər",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/screenshot_20251124_200948_com_whatsapp_mediaviewactivity_edit_354483409854510-21343190.jpg"
+    certificateURL: "https://istedadmerkezi.net/api/senedler/screenshot_20251124_200948_com_whatsapp_mediaviewactivity_edit_354473157377048-d81bf786.jpg"
   },
   {
     id: "bwIH72nX5eexHnad17RD",
@@ -2482,10 +2483,7 @@ export const studentOrgUpdates: StudentOrgUpdate[] = [];
 export const news: News[] = [
   {
     id: "dfd1cda5-b3e8-44de-b81b-b1760648b73a",
-    createdAt: {
-      seconds: 1764015087,
-      nanoseconds: 631000000
-    },
+    createdAt: "2025-11-24T12:31:27.631Z",
     content: "<article>\n  <h2>Naxçıvan Dövlət Universitetinin tələbələri üçün yeni rəqəmsal platforma istifadəyə verildi</h2>\n\n  <p>\n    Naxçıvan Dövlət Universitetinin tələbələri üçün hazırlanan\n    <strong>İstedadMərkəzi.net</strong> platforması rəsmi olaraq istifadəyə verilib.\n    Platforma tələbələrin akademik və şəxsi inkişaf göstəricilərini bir sistemdə\n    cəmləşdirərək daha şəffaf və funksional mühit yaradır.\n  </p>\n\n  <p>Yeni platforma tələbələrə aşağıdakı imkanları təqdim edir:</p>\n\n  <ul>\n    <li>\n      <strong>Profil sistemi</strong> — tələbənin bütün məlumatları vahid paneldə;\n    </li>\n    <li>\n      <strong>Sertifikat və layihə bölməsi</strong> — tələbələrin nailiyyətlərinin\n      rəqəmsal portfel şəklində saxlanması;\n    </li>\n    <li>\n      <strong>İstedad Puanı (AI əsaslı)</strong> — tələbənin aktivliyinə və\n      göstəricilərinə görə formalaşan yenilikçi bal sistemi;\n    </li>\n    <li>\n      <strong>Tələbə təşkilatlarının seçim və idarəetmə modulu</strong> — TEC, TGT,\n      THİK və digər qurumların tələbələrlə daha çevik işləməsi;\n    </li>\n    <li>\n      <strong>Rəhbərlik üçün analitika paneli</strong> — tələbələrin fəaliyyətinin\n      izlənməsi və qiymətləndirilməsi.\n    </li>\n  </ul>\n\n  <p>\n    Platforma üzərində hazırda <strong>Yapay Zəka modulu</strong> inteqrasiya edilir və\n    bu modul tələbələrin təqdim etdiyi məlumatları ümumi inkişaf meyarlarına uyğun\n    şəkildə analiz edəcək. Bu səbəbdən bəzi bölmələr mərhələli şəkildə yenilənir.\n  </p>\n\n  <p>\n    <strong>İstedadMərkəzi.net</strong> yaxın günlərdə universitetin bütün tələbə\n    təşkilatları ilə inteqrasiya olunaraq tam funksional fəaliyyətə başlayacaq.\n  </p>\n</article>\n",
     slug: "istedadmrkzinet-ndu-tlblri-ucun-yeni-rqmsal-platforma-istifady-verildi",
     coverImageUrl: "https://istedadmerkezi.net/banner.jpg",
