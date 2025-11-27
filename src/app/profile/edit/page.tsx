@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, query, where, DocumentReference } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -103,24 +103,30 @@ function EditProfilePageComponent() {
   
   const editorRef = useRef<AvatarEditor>(null);
   const userIdFromQuery = searchParams.get('userId');
-  const userIdToFetch = currentUser?.role === 'admin' && userIdFromQuery ? userIdFromQuery : currentUser?.id;
+
+  const userIdToFetch = useMemo(() => {
+    return currentUser?.role === 'admin' && userIdFromQuery ? userIdFromQuery : currentUser?.id;
+  }, [currentUser, userIdFromQuery]);
   
-  const userDocRef = useMemoFirebase(() => userIdToFetch ? doc(firestore, 'users', userIdToFetch) : null, [firestore, userIdToFetch]);
+  const userDocRef = useMemoFirebase(() => 
+    userIdToFetch && firestore ? doc(firestore, 'users', userIdToFetch) : null,
+    [firestore, userIdToFetch]
+  );
   const { data: targetUser, isLoading: userLoading } = useDoc<Student>(userDocRef);
 
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !userIdToFetch) return null;
+    if (!userIdToFetch || !firestore) return null;
     return query(collection(firestore, 'projects'), where("studentId", "==", userIdToFetch));
   }, [firestore, userIdToFetch]);
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
   const achievementsQuery = useMemoFirebase(() => {
-    if (!firestore || !userIdToFetch) return null;
+    if (!userIdToFetch || !firestore) return null;
     return query(collection(firestore, 'achievements'), where("studentId", "==", userIdToFetch));
   }, [firestore, userIdToFetch]);
   const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
 
-  const certificatesQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, [firestore, userIdToFetch]);
+  const certificatesQuery = useMemoFirebase(() => userIdToFetch && firestore ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, [firestore, userIdToFetch]);
   const { data: certificates, isLoading: certificatesLoading } = useCollection<Certificate>(certificatesQuery);
 
   const [skillInput, setSkillInput] = useState('');
@@ -286,24 +292,26 @@ function EditProfilePageComponent() {
   };
 
   const onProfileSubmit: SubmitHandler<z.infer<typeof profileSchema>> = async (data) => {
-      if (!targetUser || !userDocRef) return;
+    if (!targetUser || !userDocRef) {
+      toast({ variant: "destructive", title: "Xəta", description: "İstifadəçi məlumatları tapılmadı." });
+      return;
+    }
       
-      setIsSaving(true);
+    setIsSaving(true);
 
-      const updateData: { [key: string]: any } = { ...data };
-      updateData.gpa = Number(updateData.gpa) || 0;
-      
-      updateDocumentNonBlocking(userDocRef, updateData);
+    const updateData: { [key: string]: any } = { ...data };
+    updateData.gpa = Number(updateData.gpa) || 0;
+    
+    updateDocumentNonBlocking(userDocRef, updateData);
 
-      if (currentUser && currentUser.id === targetUser.id) {
-        updateUser(updateData);
-      }
-      
-      toast({ title: "Profil məlumatları yadda saxlanıldı", description: "Dəyişikliklər uğurla tətbiq edildi." });
-      setIsSaving(false);
-      
-      // Trigger AI score update in the background (fire and forget)
-      triggerTalentScoreUpdate(targetUser.id);
+    if (currentUser && currentUser.id === targetUser.id) {
+      updateUser(updateData);
+    }
+    
+    toast({ title: "Profil məlumatları yadda saxlanıldı", description: "Dəyişikliklər uğurla tətbiq edildi." });
+    setIsSaving(false);
+    
+    triggerTalentScoreUpdate(targetUser.id);
   };
   
   const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = (data) => {
@@ -363,7 +371,7 @@ function EditProfilePageComponent() {
   const handleDelete = async (docId: string, itemType: 'project' | 'achievement' | 'certificate') => {
       if (!targetUser || !firestore) return;
       
-      let docRef;
+      let docRef: DocumentReference;
       
       switch (itemType) {
           case 'project': 
@@ -844,5 +852,3 @@ export default function EditProfilePage() {
     </Suspense>
   )
 }
-
-    
