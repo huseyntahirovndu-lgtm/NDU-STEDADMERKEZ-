@@ -5,19 +5,14 @@ import { collection, getDocs } from 'firebase/firestore';
 import { Student, StudentOrganization, Admin, Project, Achievement, Certificate, News, StudentOrgUpdate, FacultyData, CategoryData, AppUser } from '@/types';
 
 function formatDataForFile(data: any): string {
-    // Kotirovka və digər problemlərin qarşısını almaq üçün JSON.stringify istifadə edib, sonra formatlayırıq
     const jsonString = JSON.stringify(data, (key, value) => {
-        // Timestamp obyektlərini ISO string-ə çevir
         if (value && typeof value === 'object' && value.toDate) {
             return value.toDate().toISOString();
         }
         return value;
     }, 2);
 
-    // Bəzi əl ilə düzəlişlər
-    return jsonString
-        .replace(/"([^"]+)":/g, '$1:') // Kotirovkasız açar sözlər
-        .replace(/'/g, "\\'"); // Tək dırnaqları escape et
+    return jsonString;
 }
 
 
@@ -26,7 +21,6 @@ export async function syncDataAction() {
     const { firestore } = initializeServerFirebase();
 
     const usersSnap = await getDocs(collection(firestore, 'users'));
-    const orgsSnap = await getDocs(collection(firestore, 'student-organizations'));
     const newsSnap = await getDocs(collection(firestore, 'news'));
     
     const allUsers: AppUser[] = [];
@@ -35,9 +29,9 @@ export async function syncDataAction() {
     const allCertificates: Certificate[] = [];
     const allStudentOrgUpdates: StudentOrgUpdate[] = [];
 
-    // Fetch students and admins
+    // Fetch users (students, admins, orgs) and their subcollections
     for (const doc of usersSnap.docs) {
-        const user = doc.data() as AppUser;
+        const user = { id: doc.id, ...doc.data() } as AppUser;
         allUsers.push(user);
 
         if (user.role === 'student') {
@@ -49,23 +43,19 @@ export async function syncDataAction() {
             
             const certificatesSnap = await getDocs(collection(firestore, `users/${user.id}/certificates`));
             certificatesSnap.forEach(cDoc => allCertificates.push({ id: cDoc.id, ...cDoc.data() } as Certificate));
+        } else if (user.role === 'student-organization') {
+            const updatesSnap = await getDocs(collection(firestore, `users/${user.id}/updates`));
+            updatesSnap.forEach(uDoc => allStudentOrgUpdates.push({ id: uDoc.id, ...uDoc.data() } as StudentOrgUpdate));
         }
-    }
-    
-    // Fetch student organizations
-    const studentOrgs: StudentOrganization[] = [];
-     for (const doc of orgsSnap.docs) {
-        const org = doc.data() as StudentOrganization;
-        studentOrgs.push(org);
-
-        const updatesSnap = await getDocs(collection(firestore, `student-organizations/${org.id}/updates`));
-        updatesSnap.forEach(uDoc => allStudentOrgUpdates.push({ id: uDoc.id, ...uDoc.data() } as StudentOrgUpdate));
     }
     
     const allNews: News[] = [];
     newsSnap.forEach(doc => allNews.push({ id: doc.id, ...doc.data() } as News));
     
     const students = allUsers.filter(u => u.role === 'student');
+    const studentOrgs = allUsers.filter(u => u.role === 'student-organization');
+    const adminUsers = allUsers.filter(u => u.role === 'admin');
+
     
 const faculties: FacultyData[] = [
     { id: '1', name: "İqtisadiyyat və idarəetmə fakültəsi" },
@@ -101,8 +91,7 @@ const adminUser: Admin = {
 };
 
 
-    const fileContent = `
-import { Student, StudentOrganization, Admin, Project, Achievement, Certificate, News, StudentOrgUpdate, FacultyData, CategoryData, AppUser } from '@/types';
+    const fileContent = `import { Student, StudentOrganization, Admin, Project, Achievement, Certificate, News, StudentOrgUpdate, FacultyData, CategoryData, AppUser } from '@/types';
 
 export const adminUser: Admin = ${formatDataForFile(adminUser)};
 

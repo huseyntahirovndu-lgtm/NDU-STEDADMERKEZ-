@@ -1,13 +1,12 @@
 'use client';
-import { useFirestore, useMemoFirebase, useCollectionOptimized } from '@/firebase';
 import { Student } from '@/types';
-import { useMemo } from 'react';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useStudentOrg } from '../layout';
+import { students as allStudents } from '@/lib/placeholder-data';
 
 const chartConfig = {
   members: {
@@ -17,14 +16,18 @@ const chartConfig = {
 };
 
 export default function OrganizationDashboardPage() {
-  const firestore = useFirestore();
   const { organization, isLoading: orgLoading } = useStudentOrg();
+  const [members, setMembers] = useState<Student[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
 
-  const membersQuery = useMemoFirebase(
-    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
-    [firestore, JSON.stringify(organization?.memberIds)]
-  );
-  const { data: members, isLoading: membersLoading } = useCollectionOptimized<Student>(membersQuery, { enableCache: true, disableRealtimeOnInit: true });
+  useEffect(() => {
+    if (organization?.memberIds && organization.memberIds.length > 0) {
+      const memberDetails = allStudents.filter(s => organization.memberIds.includes(s.id));
+      setMembers(memberDetails);
+    }
+    setMembersLoading(false);
+  }, [organization]);
+
 
   const memberJoinData = useMemo(() => {
     if (!members) return [];
@@ -40,25 +43,12 @@ export default function OrganizationDashboardPage() {
         if (!member || !member.createdAt) {
             return; 
         }
-
-        let memberDate: Date | null = null;
-        try {
-            if (member.createdAt && typeof member.createdAt.toDate === 'function') {
-                memberDate = member.createdAt.toDate();
-            } else if (typeof member.createdAt === 'string' || typeof member.createdAt === 'number') {
-                memberDate = new Date(member.createdAt);
-                 if (isNaN(memberDate.getTime())) {
-                    memberDate = null;
-                }
-            } else if (member.createdAt instanceof Date) {
-                memberDate = member.createdAt;
-            }
-        } catch(e) {
-            console.error("Tarix formatı ilə bağlı problem:", member.id, member.createdAt, e);
+        const memberDate = new Date(member.createdAt);
+        if (isNaN(memberDate.getTime())) {
             return;
         }
 
-        if (memberDate && memberDate.getFullYear() === currentYear) {
+        if (memberDate.getFullYear() === currentYear) {
             const monthIndex = memberDate.getMonth();
             const monthName = monthOrder[monthIndex];
             if (monthName) {

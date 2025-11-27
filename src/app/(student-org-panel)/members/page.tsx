@@ -1,8 +1,6 @@
 'use client';
-import { useFirestore, useCollectionOptimized, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Student } from '@/types';
-import { useState } from 'react';
-import { collection, doc, query, where, documentId } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,26 +21,29 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useStudentOrg } from '@/app/(student-org-panel)/layout';
+import { students as allStudents } from '@/lib/placeholder-data';
+
 
 export default function OrganizationMembersPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const { organization, isLoading: orgLoading } = useStudentOrg();
+  const { organization, isLoading: orgLoading, setOrganization } = useStudentOrg();
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [members, setMembers] = useState<Student[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
 
-  const membersQuery = useMemoFirebase(
-    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
-    [firestore, JSON.stringify(organization?.memberIds)]
-  );
-  const { data: members, isLoading: membersLoading } = useCollectionOptimized<Student>(membersQuery, { enableCache: true, disableRealtimeOnInit: true });
+  useEffect(() => {
+    if (organization?.memberIds) {
+        const memberDetails = allStudents.filter(s => organization.memberIds.includes(s.id));
+        setMembers(memberDetails);
+    }
+    setMembersLoading(false);
+  }, [organization])
 
-  const allStudentsQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'student')), [firestore]);
-  const { data: allStudents } = useCollectionOptimized<Student>(allStudentsQuery, { enableCache: true, disableRealtimeOnInit: true });
 
   const studentOptions =
-    allStudents?.filter(s => !organization?.memberIds?.includes(s.id)).map(s => ({
+    allStudents.filter(s => !organization?.memberIds?.includes(s.id)).map(s => ({
         value: s.id,
         label: `${s.firstName} ${s.lastName} (${s.faculty})`,
       })) || [];
@@ -50,22 +51,25 @@ export default function OrganizationMembersPage() {
   const handleAddMember = async () => {
     if (!organization || !selectedStudentId) return;
     setIsAddingMember(true);
-    const orgDocRef = doc(firestore, 'users', organization.id);
+    
     const newMemberIds = [...(organization.memberIds || []), selectedStudentId];
 
-    await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });
-    toast({ title: 'Uğurlu', description: 'Təşkilata yeni üzv əlavə edildi.' });
+    // This is a mock. In a real app, you would save this to the backend.
+    setOrganization(prev => prev ? { ...prev, memberIds: newMemberIds } : null);
+    
+    toast({ title: 'Uğurlu', description: 'Təşkilata yeni üzv əlavə edildi. (mock)' });
     setSelectedStudentId('');
     setIsAddingMember(false);
   };
   
   const handleRemoveMember = async (memberId: string) => {
     if(!organization) return;
-    const orgDocRef = doc(firestore, 'users', organization.id);
     const newMemberIds = organization.memberIds.filter(id => id !== memberId);
     
-    await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });
-    toast({ title: 'Uğurlu', description: 'Üzv təşkilatdan çıxarıldı.' });
+    // This is a mock. In a real app, you would save this to the backend.
+    setOrganization(prev => prev ? { ...prev, memberIds: newMemberIds } : null);
+
+    toast({ title: 'Uğurlu', description: 'Üzv təşkilatdan çıxarıldı. (mock)' });
   }
 
   if (orgLoading) {

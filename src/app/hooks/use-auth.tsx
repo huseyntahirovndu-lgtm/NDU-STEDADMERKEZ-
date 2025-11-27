@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 import type { AppUser, Student, StudentOrganization, Admin } from '@/types';
+import { allUsers as placeholderUsers, adminUser as adminUserObject } from '@/lib/placeholder-data';
 import { v4 as uuidv4 } from 'uuid';
+
 
 interface AuthContextType {
   user: AppUser | null;
@@ -24,42 +24,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const FAKE_AUTH_DELAY = 10; 
 
-const adminUserObject: Admin = {
-    id: 'admin_user',
-    role: 'admin',
-    email: 'huseynimanov@ndu.edu.az',
-    firstName: 'Hüseyn',
-    lastName: 'Tahirov',
-};
+// Store passwords in memory for this mock implementation
+const passwordMap = new Map<string, string>();
+passwordMap.set(adminUserObject.email, 'huseynimanov2009@thikndu');
+// Initialize passwords for placeholder users
+placeholderUsers.forEach(u => {
+    if (u && u.email) {
+        passwordMap.set(u.email, 'password123'); // Default password for all mock users
+    }
+});
+
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
-    const checkUserSession = async () => {
+    const checkUserSession = () => {
       setLoading(true);
       const userId = localStorage.getItem('userId');
       
-      if (userId === adminUserObject.id) {
-        setUser(adminUserObject);
-      } else if (userId && firestore) {
-        try {
-          const userDocRef = doc(firestore, 'users', userId);
-          const userSnap = await getDoc(userDocRef);
-
-          if (userSnap.exists()) {
-            setUser(userSnap.data() as AppUser);
+      if (userId) {
+        if (userId === adminUserObject.id) {
+          setUser(adminUserObject);
+        } else {
+          const foundUser = placeholderUsers.find(u => u && u.id === userId);
+          if (foundUser) {
+            setUser(foundUser);
           } else {
-             localStorage.removeItem('userId');
-             setUser(null);
+            localStorage.removeItem('userId');
+            setUser(null);
           }
-        } catch (e) {
-          console.error("Failed to restore session from Firestore", e);
-          localStorage.removeItem('userId');
-          setUser(null);
         }
       } else {
         setUser(null);
@@ -67,53 +63,43 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     };
     
-    if(firestore) {
-      checkUserSession();
-    }
-  }, [firestore]);
+    checkUserSession();
+  }, []);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setLoading(true);
     await new Promise(res => setTimeout(res, FAKE_AUTH_DELAY));
 
+     // Admin check
     if (email === adminUserObject.email && pass === 'huseynimanov2009@thikndu') {
         setUser(adminUserObject);
         localStorage.setItem('userId', adminUserObject.id);
-        setLoading(false);
         router.push('/admin/dashboard');
+        setLoading(false);
         return true;
     }
 
-    if (!firestore) return false;
-
-    try {
-      const usersRef = collection(firestore, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data() as AppUser;
-        
-        setUser(userData);
-        localStorage.setItem('userId', userData.id);
-        
-        if (userData.role === 'student') router.push('/student-dashboard');
-        else if (userData.role === 'student-organization') router.push('/telebe-teskilati-paneli/dashboard');
-        else router.push('/');
-
+    const expectedPassword = passwordMap.get(email);
+    
+    if (!expectedPassword || expectedPassword !== pass) {
         setLoading(false);
-        return true;
-      }
-      
-      setLoading(false);
-      return false;
-
-    } catch (error) {
-      console.error("Login failed:", error);
+        return false;
     }
     
+    const foundUser = placeholderUsers.find(u => u && u.email === email);
+    
+    if (foundUser) {
+        setUser(foundUser);
+        localStorage.setItem('userId', foundUser.id);
+        
+        if (foundUser.role === 'student') router.push('/student-dashboard');
+        else if (foundUser.role === 'student-organization') router.push('/telebe-teskilati-paneli/dashboard');
+        
+        setLoading(false);
+        return true;
+    }
+
     setLoading(false);
     return false;
   };
@@ -132,59 +118,41 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
      setLoading(true);
      await new Promise(res => setTimeout(res, FAKE_AUTH_DELAY));
 
-    if (!firestore) {
-      console.error("Firestore is not initialized");
-      setLoading(false);
-      return false;
-    }
-
-    try {
-      const collectionRef = collection(firestore, "users");
-
-      const q = query(collectionRef, where("email", "==", newUser.email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
+    if (placeholderUsers.some(u => u && u.email === newUser.email) || passwordMap.has(newUser.email)) {
         console.log(`User with this email already exists.`);
         setLoading(false);
         return false;
-      }
-
-      const newUserId = uuidv4();
-      const userDocRef = doc(firestore, "users", newUserId);
-      
-      const userWithId = {
-          ...newUser,
-          id: newUserId,
-          createdAt: new Date().toISOString(),
-          status: newUser.role === 'student' ? 'gözləyir' : newUser.status,
-      };
-
-      await setDoc(userDocRef, userWithId);
-      setLoading(false);
-
-      if (!skipRedirect) {
-          router.push('/login');
-      }
-      return true;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      setLoading(false);
-      return false;
     }
+    
+    const newUserId = uuidv4();
+    const userWithId = {
+        ...newUser,
+        id: newUserId,
+        createdAt: new Date().toISOString(),
+        status: newUser.role === 'student' ? 'gözləyir' : newUser.status,
+    };
+    
+    console.log("New user registered (mock - will not be persisted):", userWithId);
+    // In a real app, you would now send this to your backend to save.
+    // For this mock setup, it won't be added to the placeholder data.
+    passwordMap.set(newUser.email, pass);
+
+    setLoading(false);
+
+    if (!skipRedirect) {
+        router.push('/login');
+    }
+    return true;
   };
 
   const updateUser = (updatedData: Partial<AppUser>): boolean => {
     if (!user) return false;
+    
     const newUserData = { ...user, ...updatedData };
     setUser(newUserData);
-    
-    if (firestore && user.id !== 'admin_user') {
-        const userDocRef = doc(firestore, "users", newUserData.id);
-        setDoc(userDocRef, updatedData, { merge: true }).catch(err => {
-            console.error("Failed to update user in Firestore:", err);
-        });
-    }
+     // In a real app, you would send this update to your backend.
+    // For the mock setup, we can log it.
+    console.log("User data updated in context (mock - not persisted):", newUserData);
     return true;
   };
 

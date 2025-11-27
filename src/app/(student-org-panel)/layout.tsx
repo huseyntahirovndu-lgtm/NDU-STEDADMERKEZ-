@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Home, Newspaper, Settings, Users, Library, Menu } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
-import { useEffect, createContext, useContext } from "react";
+import { useEffect, createContext, useContext, useState } from "react";
 import type { StudentOrganization } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,6 +21,7 @@ const NAV_LINKS = [
 interface OrgContextType {
     organization: StudentOrganization | null;
     isLoading: boolean;
+    setOrganization: React.Dispatch<React.SetStateAction<StudentOrganization | null>>;
 }
 
 const StudentOrgContext = createContext<OrgContextType | null>(null);
@@ -43,8 +44,14 @@ export default function StudentOrganizationLayout({
   const router = useRouter();
   const { toast } = useToast();
 
-  const organization = user as StudentOrganization | null;
+  const [organization, setOrganization] = useState<StudentOrganization | null>(user as StudentOrganization | null);
   const isLoading = authLoading;
+  
+  useEffect(() => {
+    if (user?.role === 'student-organization') {
+      setOrganization(user as StudentOrganization);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isLoading && user?.role !== 'student-organization') {
@@ -58,17 +65,16 @@ export default function StudentOrganizationLayout({
 
   }, [isLoading, user, router, toast]);
 
-  if (isLoading || user?.role !== 'student-organization' || (user as StudentOrganization).status !== 'təsdiqlənmiş') {
+  if (isLoading || !organization || organization.role !== 'student-organization' || organization.status !== 'təsdiqlənmiş') {
       return <div className="flex h-screen items-center justify-center">Yüklənir və ya səlahiyyət yoxlanılır...</div>;
   }
   
   const isActive = (href: string, exact?: boolean) => {
-    const cleanPathname = pathname.replace('/(student-org-panel)', '/telebe-teskilati-paneli');
-    return exact ? cleanPathname === href : cleanPathname.startsWith(href);
+    return exact ? pathname === href : pathname.startsWith(href);
   }
 
   return (
-    <StudentOrgContext.Provider value={{ organization, isLoading: authLoading }}>
+    <StudentOrgContext.Provider value={{ organization, isLoading: authLoading, setOrganization }}>
        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
