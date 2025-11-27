@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 191 89% 37%;
+    --primary-foreground: 300 0% 100%;
+    --primary-muted: 191 89% 97%;
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 220 14% 22%;
+    --muted: 210 20% 98%;
+    --muted-foreground: 215 25% 45%;
+    --accent: 210 20% 94%;
+    --accent-foreground: 221 14% 23%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 191 89% 37%;
+    --radius: 0.8rem;
+    --chart-1: 191 89% 37%;
+    --chart-2: 191 70% 50%;
+    --chart-3: 30 90% 55%;
+    --chart-4: 217 91% 60%;
+    --chart-5: 259 90% 67%;
+
+    /* Category Colors */
+    --category-stem: 217 91% 60%;
+    --category-humanitarian: 259 90% 67%;
+    --category-art: 336 81% 62%;
+    --category-sport: 158 77% 40%;
+    --category-entrepreneurship: 35 92% 51%;
+    --category-technology: 188 95% 42%;
+
+    /* Achievement Colors */
+    --achievement-international: 35 92% 51%;
+    --achievement-republic: 220 13% 68%;
+    --achievement-regional: 29 45% 50%;
+    --achievement-university: 212 92% 67%;
+  }
+
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 191 89% 37%;
+    --primary-foreground: 300 0% 100%;
+    --primary-muted: 191 89% 10%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 217 10% 65%;
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 191 89% 37%;
+
+    /* Category Colors */
+    --category-stem: 217 91% 60%;
+    --category-humanitarian: 259 90% 67%;
+    --category-art: 336 81% 62%;
+    --category-sport: 158 77% 40%;
+    --category-entrepreneurship: 35 92% 51%;
+    --category-technology: 188 95% 42%;
+
+    /* Achievement Colors */
+    --achievement-international: 35 92% 51%;
+    --achievement-republic: 220 13% 68%;
+    --achievement-regional: 29 45% 50%;
+    --achievement-university: 212 92% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
+  }
+}
