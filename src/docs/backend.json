@@ -51,34 +51,6 @@
         "successStory": {
           "type": "string",
           "description": "A short story or testimonial about the student's success."
-        },
-        "skillIds": {
-          "type": "array",
-          "description": "References to Skills. (Relationship: Student N:N Skill)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "projectIds": {
-          "type": "array",
-          "description": "References to Projects. (Relationship: Student 1:N Project)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "achievementIds": {
-          "type": "array",
-          "description": "References to Achievements. (Relationship: Student 1:N Achievement)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "socialLinkIds": {
-          "type": "array",
-          "description": "References to SocialLinks. (Relationship: Student 1:N SocialLink)",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
@@ -378,19 +350,15 @@
           ]
         }
       },
-      {
-        "path": "/users/{userId}/projects/{projectId}",
+       {
+        "path": "/projects/{projectId}",
         "definition": {
           "entityName": "Project",
           "schema": {
             "$ref": "#/backend/entities/Project"
           },
-          "description": "Stores project information for a specific student.",
+          "description": "Stores project information for a all students.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the student."
-            },
             {
               "name": "projectId",
               "description": "The unique identifier for the project."
@@ -398,19 +366,15 @@
           ]
         }
       },
-      {
-        "path": "/users/{userId}/achievements/{achievementId}",
+       {
+        "path": "/achievements/{achievementId}",
         "definition": {
           "entityName": "Achievement",
           "schema": {
             "$ref": "#/backend/entities/Achievement"
           },
-          "description": "Stores achievement information for a specific student.",
+          "description": "Stores achievement information for all students.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the student."
-            },
             {
               "name": "achievementId",
               "description": "The unique identifier for the achievement."

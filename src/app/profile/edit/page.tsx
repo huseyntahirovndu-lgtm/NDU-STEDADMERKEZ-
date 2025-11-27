@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, query, setDoc, where, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -108,11 +108,11 @@ function EditProfilePageComponent() {
   const userDocRef = useMemoFirebase(() => userIdToFetch ? doc(firestore, 'users', userIdToFetch) : null, [firestore, userIdToFetch]);
   const { data: targetUser, isLoading: userLoading } = useDoc<Student>(userDocRef);
 
-  const projectsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `users/${userIdToFetch}/projects`) : null, [firestore, userIdToFetch]);
-  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
+  const projectsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `projects`) : null, [userIdToFetch]);
+  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(query(projectsQuery, where("studentId", "==", userIdToFetch || "")));
 
-  const achievementsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `users/${userIdToFetch}/achievements`) : null, [firestore, userIdToFetch]);
-  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+  const achievementsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `achievements`) : null, [userIdToFetch]);
+  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(query(achievementsQuery, where("studentId", "==", userIdToFetch || "")));
 
   const certificatesQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, [firestore, userIdToFetch]);
   const { data: certificates, isLoading: certificatesLoading } = useCollection<Certificate>(certificatesQuery);
@@ -135,8 +135,8 @@ function EditProfilePageComponent() {
             const data = userDoc.data() as Student;
             const studentId = userDoc.id;
 
-            const projectsSnap = await getDocs(collection(firestore, `users/${studentId}/projects`));
-            const achievementsSnap = await getDocs(collection(firestore, `users/${studentId}/achievements`));
+            const projectsSnap = await getDocs(query(collection(firestore, 'projects'), where('studentId', '==', studentId)));
+            const achievementsSnap = await getDocs(query(collection(firestore, 'achievements'), where('studentId', '==', studentId)));
             const certificatesSnap = await getDocs(collection(firestore, `users/${studentId}/certificates`));
 
             return {
@@ -308,12 +308,12 @@ function EditProfilePageComponent() {
       toast({ title: "Profil məlumatları yeniləndi" });
     };
   
-  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = (data) => {
+  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = async (data) => {
     if (!targetUser || !firestore) return;
-    const projectCollectionRef = collection(firestore, `users/${targetUser.id}/projects`);
-    addDocumentNonBlocking(projectCollectionRef, { 
+    const projectCollectionRef = collection(firestore, `projects`);
+    await addDoc(projectCollectionRef, { 
       ...data, 
-      ownerId: targetUser.id, 
+      studentId: targetUser.id, 
       ownerType: 'student',
       teamMemberIds: [], 
       invitedStudentIds: [] 
@@ -323,10 +323,10 @@ function EditProfilePageComponent() {
     toast({ title: "Layihə əlavə edildi" });
   };
   
-  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = (data) => {
+  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = async (data) => {
     if (!targetUser || !firestore) return;
-    const achievementCollectionRef = collection(firestore, `users/${targetUser.id}/achievements`);
-    addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: targetUser.id });
+    const achievementCollectionRef = collection(firestore, `achievements`);
+     await addDoc(achievementCollectionRef, { ...data, studentId: targetUser.id });
     achievementForm.reset();
     triggerTalentScoreUpdate(targetUser.id);
     toast({ title: "Nailiyyət əlavə edildi" });
@@ -365,23 +365,21 @@ function EditProfilePageComponent() {
   const handleDelete = async (docId: string, itemType: 'project' | 'achievement' | 'certificate') => {
       if (!targetUser || !firestore) return;
       
-      const batch = writeBatch(firestore);
       let docRef;
       
       switch (itemType) {
           case 'project': 
-            docRef = doc(firestore, `users/${targetUser.id}/projects`, docId);
+            docRef = doc(firestore, `projects`, docId);
             break;
           case 'achievement': 
-            docRef = doc(firestore, `users/${targetUser.id}/achievements`, docId);
+            docRef = doc(firestore, `achievements`, docId);
             break;
           case 'certificate': 
             docRef = doc(firestore, `users/${targetUser.id}/certificates`, docId);
             break;
       }
-      batch.delete(docRef);
-
-      await batch.commit();
+      
+      await deleteDocumentNonBlocking(docRef);
 
       triggerTalentScoreUpdate(targetUser.id);
       toast({ title: "Element silindi", description: "Seçilmiş element uğurla silindi." });

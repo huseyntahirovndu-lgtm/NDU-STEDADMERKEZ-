@@ -61,44 +61,29 @@ export default function HomePage() {
   const { user } = useAuth();
 
   const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, [firestore]);
-  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student-organization")) : null, [firestore]);
+  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")) : null, [firestore]);
   const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
   const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc'), limit(3)) : null, [firestore]);
+  const achievementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'achievements') : null, [firestore]);
+
 
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
   const { data: studentOrgs, isLoading: studentOrgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
   const { data: latestNews, isLoading: newsLoading } = useCollection<News>(newsQuery);
+  const { data: projectsData, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
+  const { data: achievementsData, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+
 
   const [topTalents, setTopTalents] = useState<Student[]>([]);
   const [newMembers, setNewMembers] = useState<Student[]>([]);
   const [strongestProjects, setStrongestProjects] = useState<EnrichedProject[]>([]);
   const [popularSkills, setPopularSkills] = useState<string[]>([]);
   const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
-  const [stats, setStats] = useState({ projects: 0, achievements: 0 });
-  const [statsLoading, setStatsLoading] = useState(true);
   
-  const isLoading = studentsLoading || studentOrgsLoading || categoriesLoading || statsLoading || newsLoading;
-
-  useEffect(() => {
-    if (firestore && students) {
-        const fetchStats = async () => {
-            setStatsLoading(true);
-            let projectCount = 0;
-            let achievementCount = 0;
-            
-            for (const student of students) {
-                const projectsSnap = await getDocs(collection(firestore, `users/${student.id}/projects`));
-                const achievementsSnap = await getDocs(collection(firestore, `users/${student.id}/achievements`));
-                projectCount += projectsSnap.size;
-                achievementCount += achievementsSnap.size;
-            }
-            setStats({ projects: projectCount, achievements: achievementCount });
-            setStatsLoading(false);
-        };
-        fetchStats();
-    }
-  }, [firestore, students]);
+  const statsLoading = studentsLoading || projectsLoading || achievementsLoading;
+  const isLoading = statsLoading || studentOrgsLoading || categoriesLoading || newsLoading;
 
   useEffect(() => {
     if (!students || students.length === 0) return;
@@ -155,27 +140,15 @@ export default function HomePage() {
   }, [students]);
 
    useEffect(() => {
-    if (!students || !firestore) return;
+    if (!projectsData || !students) return;
     
-    const fetchProjects = async () => {
-        const allStudentProjects: EnrichedProject[] = [];
-        for (const student of students) {
-            if(student.role !== 'student') continue;
-            const projectsCol = collection(firestore, `users/${student.id}/projects`);
-            const projectsSnap = await getDocs(projectsCol);
-            projectsSnap.forEach(doc => {
-                const projectData = doc.data() as Project;
-                if(projectData.ownerType === 'student') {
-                    allStudentProjects.push({ ...projectData, id: doc.id, student });
-                }
-            });
-        }
-        // Here we can add sorting logic if needed, e.g., by date
-        setStrongestProjects(allStudentProjects.slice(0, 3));
-    }
-    fetchProjects();
+    const enriched = projectsData.map(project => {
+        const student = students.find(s => s.id === project.studentId);
+        return { ...project, student };
+    });
+    setStrongestProjects(enriched);
     
-   }, [students, firestore]);
+   }, [projectsData, students]);
 
 
   return (
@@ -210,12 +183,12 @@ export default function HomePage() {
               />
               <StatCard
                 title="Aktiv Layihələr"
-                value={isLoading ? '...' : (stats.projects.toString())}
+                value={isLoading ? '...' : (projectsData?.length.toString() ?? '0')}
                 icon={Lightbulb}
               />
               <StatCard
                 title="Ümumi Uğurlar"
-                value={isLoading ? '...' : (stats.achievements.toString())}
+                value={isLoading ? '...' : (achievementsData?.length.toString() ?? '0')}
                 icon={Trophy}
               />
             </div>
