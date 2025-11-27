@@ -2,7 +2,7 @@
 import { useParams } from 'next/navigation';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { StudentOrganization, StudentOrgUpdate } from '@/types';
-import { doc, collection, query, orderBy, where } from 'firebase/firestore';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,11 +38,11 @@ export default function StudentOrgDetailsPage() {
 
   const orgId = typeof id === 'string' ? id : '';
 
-  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'student-organizations', orgId) : null), [firestore, orgId]);
+  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'users', orgId) : null), [firestore, orgId]);
   const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
   
   const updatesQuery = useMemoFirebase(
-    () => (firestore && orgId ? query(collection(firestore, `student-organizations/${orgId}/updates`), orderBy('createdAt', 'desc')) : null),
+    () => (firestore && orgId ? query(collection(firestore, `users/${orgId}/updates`), orderBy('createdAt', 'desc')) : null),
     [firestore, orgId]
 );
   const { data: updates, isLoading: updatesLoading } = useCollection<StudentOrgUpdate>(updatesQuery);

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { File, ListFilter, MoreHorizontal, Search } from "lucide-react"
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge"
@@ -50,7 +50,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import type { Student, StudentStatus, FacultyData, AppUser } from "@/types";
+import type { Student, StudentStatus, FacultyData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";

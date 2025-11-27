@@ -49,7 +49,7 @@ export default function AdminNewsPage() {
     const firestore = useFirestore();
 
     const newsQuery = useMemoFirebase(() => 
-        firestore ? query(collection(firestore, `news`), orderBy("createdAt", "desc")) : null, 
+        firestore ? query(collection(firestore, 'news'), orderBy("createdAt", "desc")) : null, 
         [firestore]
     );
     const { data: news, isLoading } = useCollection<News>(newsQuery);

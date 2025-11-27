@@ -34,16 +34,16 @@ export default function OrganizationMembersPage() {
   const [isAddingMember, setIsAddingMember] = useState(false);
 
   const membersQuery = useMemoFirebase(
-    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
+    () => (firestore && organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
     [firestore, organization]
   );
   const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
 
-  const allStudentsQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'student')), [firestore]);
+  const allStudentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null, [firestore]);
   const { data: allStudents } = useCollection<Student>(allStudentsQuery);
 
   const studentOptions =
-    allStudents?.filter(s => !organization?.memberIds?.includes(s.id) && s.id !== organization?.leaderId).map(s => ({
+    allStudents?.filter(s => !organization?.memberIds?.includes(s.id)).map(s => ({
         value: s.id,
         label: `${s.firstName} ${s.lastName} (${s.faculty})`,
       })) || [];
@@ -51,7 +51,7 @@ export default function OrganizationMembersPage() {
   const handleAddMember = async () => {
     if (!organization || !selectedStudentId) return;
     setIsAddingMember(true);
-    const orgDocRef = doc(firestore, 'student-organizations', organization.id);
+    const orgDocRef = doc(firestore, 'users', organization.id);
     const newMemberIds = [...(organization.memberIds || []), selectedStudentId];
 
     await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });
@@ -62,7 +62,7 @@ export default function OrganizationMembersPage() {
   
   const handleRemoveMember = async (memberId: string) => {
     if(!organization) return;
-    const orgDocRef = doc(firestore, 'student-organizations', organization.id);
+    const orgDocRef = doc(firestore, 'users', organization.id);
     const newMemberIds = organization.memberIds.filter(id => id !== memberId);
     
     await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });

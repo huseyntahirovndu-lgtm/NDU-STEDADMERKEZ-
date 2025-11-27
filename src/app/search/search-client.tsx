@@ -32,9 +32,9 @@ export default function SearchClient() {
   const [sortBy, setSortBy] = useState('talentScore');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('none');
   
-  const studentsQuery = useMemoFirebase(() => query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")), [firestore]);
-  const facultiesQuery = useMemoFirebase(() => collection(firestore, "faculties"), [firestore]);
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, "categories"), [firestore]);
+  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, [firestore]);
+  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, "faculties") : null, [firestore]);
+  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
 
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
   const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);

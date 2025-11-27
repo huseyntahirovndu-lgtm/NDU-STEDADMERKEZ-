@@ -18,13 +18,14 @@ export default function AddStudentOrgPage() {
             return false;
         }
 
-        const newOrgData: Omit<StudentOrganization, 'id' | 'createdAt' | 'leaderId' | 'faculty' | 'memberIds' > = {
+        const newOrgData: Omit<StudentOrganization, 'id' | 'createdAt'> = {
             role: 'student-organization',
             name: data.name,
             email: data.email,
             description: data.description,
             logoUrl: data.logoUrl,
             status: data.status,
+            memberIds: [],
         };
 
         const success = await register(newOrgData as any, pass, true);

@@ -21,7 +21,7 @@ export default function OrganizationDashboardPage() {
   const { organization, isLoading: orgLoading } = useStudentOrg();
 
   const membersQuery = useMemoFirebase(
-    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
+    () => (firestore && organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
     [firestore, organization]
   );
   const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);

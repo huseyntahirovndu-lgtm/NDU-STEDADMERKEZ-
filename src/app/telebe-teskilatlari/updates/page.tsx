@@ -52,7 +52,7 @@ export default function OrgUpdatesPage() {
     const organization = user as StudentOrganization | null;
 
     const updatesQuery = useMemoFirebase(() => 
-        organization ? query(collection(firestore, `student-organizations/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
+        (firestore && organization) ? query(collection(firestore, `users/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
         [firestore, organization]
     );
     const { data: updates, isLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
@@ -62,7 +62,7 @@ export default function OrgUpdatesPage() {
 
         const batch = writeBatch(firestore);
 
-        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, updateId);
+        const subCollectionDocRef = doc(firestore, `users/${organization.id}/updates`, updateId);
         const topLevelDocRef = doc(firestore, 'student-org-updates', updateId);
 
         batch.delete(subCollectionDocRef);
@@ -127,7 +127,7 @@ export default function OrgUpdatesPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/telebe-teskilati-paneli/updates/edit/${item.id}`}>Redaktə Et</Link>
+                                            <Link href={`/telebe-teskilatlari/updates/edit/${item.id}`}>Redaktə Et</Link>
                                         </DropdownMenuItem>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>

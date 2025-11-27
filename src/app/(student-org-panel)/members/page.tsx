@@ -33,12 +33,12 @@ export default function OrganizationMembersPage() {
   const [isAddingMember, setIsAddingMember] = useState(false);
 
   const membersQuery = useMemoFirebase(
-    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
+    () => (firestore && organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
     [firestore, organization]
   );
   const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
 
-  const allStudentsQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'student')), [firestore]);
+  const allStudentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null, [firestore]);
   const { data: allStudents } = useCollection<Student>(allStudentsQuery);
 
   const studentOptions =

@@ -6,10 +6,10 @@ import { News, Admin } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Calendar, User } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useEffect, useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -48,15 +48,6 @@ export default function NewsDetailsPage() {
     const { data: newsData, isLoading: isNewsLoading } = useCollection<News>(newsQuery);
     const newsItem = newsData?.[0];
 
-    const authorQuery = useMemoFirebase(() =>
-        firestore && newsItem?.authorId
-            ? query(collection(firestore, 'users'), where('id', '==', newsItem.authorId), limit(1))
-            : null,
-        [firestore, newsItem]
-    );
-    const { data: authorData, isLoading: isAuthorLoading } = useCollection<Admin>(authorQuery);
-    const author = authorData?.[0];
-
     const [sanitizedContent, setSanitizedContent] = useState('');
 
     useEffect(() => {
@@ -65,9 +56,7 @@ export default function NewsDetailsPage() {
         }
     }, [newsItem?.content]);
 
-    const isLoading = isNewsLoading || (newsData && newsData.length > 0 && isAuthorLoading);
-    
-    if (isLoading) {
+    if (isNewsLoading) {
         return <NewsDetailsLoading />;
     }
 
@@ -84,9 +73,9 @@ export default function NewsDetailsPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                           <AvatarFallback>{author ? `${author.firstName.charAt(0)}${author.lastName.charAt(0)}` : 'A'}</AvatarFallback>
+                           <AvatarFallback>{newsItem.authorName ? newsItem.authorName.split(' ').map(n => n[0]).join('') : 'A'}</AvatarFallback>
                         </Avatar>
-                        <span>{author ? `${author.firstName} ${author.lastName}` : 'Admin'}</span>
+                        <span>{newsItem.authorName || 'Admin'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />

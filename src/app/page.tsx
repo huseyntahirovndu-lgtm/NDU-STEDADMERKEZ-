@@ -60,10 +60,10 @@ export default function HomePage() {
   const firestore = useFirestore();
   const { user } = useAuth();
 
-  const studentsQuery = useMemoFirebase(() => query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")), [firestore]);
-  const studentOrgsQuery = useMemoFirebase(() => query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")), [firestore]);
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, "categories"), [firestore]);
-  const newsQuery = useMemoFirebase(() => query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)), [firestore]);
+  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, [firestore]);
+  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student-organization")) : null, [firestore]);
+  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
+  const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
 
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
   const { data: studentOrgs, isLoading: studentOrgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);

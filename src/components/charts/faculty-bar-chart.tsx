@@ -25,8 +25,8 @@ interface FacultyBarChartProps {
 
 export function FacultyBarChart({ students }: FacultyBarChartProps) {
   const firestore = useFirestore();
-  const facultiesQuery = useMemoFirebase(() => collection(firestore, 'faculties'), [firestore]);
-  const { data: faculties } = useCollection<{name: string}>(facultiesQuery);
+  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'faculties') : null, [firestore]);
+  const { data: faculties } = useCollection<{id: string; name: string}>(facultiesQuery);
 
   const chartData = faculties?.map(faculty => ({
       name: faculty.name.split(' ')[0], // Shorten name for display

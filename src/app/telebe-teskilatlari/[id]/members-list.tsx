@@ -20,13 +20,13 @@ export default function MembersList({ organization }: MembersListProps) {
 
   const membersQuery = useMemoFirebase(
     () =>
-      currentUser && organization?.memberIds && organization.memberIds.length > 0
+      (firestore && organization?.memberIds && organization.memberIds.length > 0)
         ? query(
             collection(firestore, 'users'),
             where(documentId(), 'in', organization.memberIds)
           )
         : null,
-    [firestore, organization, currentUser]
+    [firestore, organization]
   );
 
   const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
