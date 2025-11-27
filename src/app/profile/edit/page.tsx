@@ -16,17 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Trash2, PlusCircle, Award, Briefcase, FileText, User as UserIcon, X, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, doc, writeBatch, getDocs, query, where, DocumentReference } from 'firebase/firestore';
@@ -37,10 +27,9 @@ import AvatarEditor from 'react-avatar-editor';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 
-
 const skillSchema = z.object({
-    name: z.string().min(1, "Bacarıq adı boş ola bilməz."),
-    level: z.enum(['Başlanğıc', 'Orta', 'İrəli']),
+  name: z.string().min(1, "Bacarıq adı boş ola bilməz."),
+  level: z.enum(['Başlanğıc', 'Orta', 'İrəli']),
 });
 
 const profileSchema = z.object({
@@ -50,7 +39,7 @@ const profileSchema = z.object({
   major: z.string().min(2, "İxtisas boş ola bilməz."),
   courseYear: z.coerce.number().min(1, "Təhsil ilini seçin.").max(6),
   educationForm: z.string().optional(),
-  gpa: z.coerce.number({invalid_type_error: "ÜOMG mütləq qeyd edilməlidir."}).min(0, "ÜOMG 0-dan az ola bilməz.").max(100, "ÜOMG 100-dən çox ola bilməz.").optional().nullable(),
+  gpa: z.coerce.number({ invalid_type_error: "ÜOMG mütləq qeyd edilməlidir." }).min(0, "ÜOMG 0-dan az ola bilməz.").max(100, "ÜOMG 100-dən çox ola bilməz.").optional().nullable(),
   skills: z.array(skillSchema).optional(),
   successStory: z.string().optional(),
   linkedInURL: z.string().url().or(z.literal('')).optional(),
@@ -81,63 +70,86 @@ const achievementSchema = z.object({
 });
 
 const certificateSchema = z.object({
-    name: z.string().min(3, "Sertifikat adı boş ola bilməz."),
-    certificateURL: z.string().url({ message: "Etibarlı bir link daxil edin." }).optional().or(z.literal('')),
-    level: z.enum(['Beynəlxalq', 'Respublika', 'Regional', 'Universitet']),
+  name: z.string().min(3, "Sertifikat adı boş ola bilməz."),
+  certificateURL: z.string().url({ message: "Etibarlı bir link daxil edin." }).optional().or(z.literal('')),
+  level: z.enum(['Beynəlxalq', 'Respublika', 'Regional', 'Universitet']),
 });
 
 const SKILL_LEVELS: SkillLevel[] = ['Başlanğıc', 'Orta', 'İrəli'];
 
 function EditProfilePageComponent() {
-  const { user: currentUser, loading, updateUser } = useAuth();
+  const { user: currentUser, loading: authLoading, updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const firestore = useFirestore();
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.2);
-  
+
   const editorRef = useRef<AvatarEditor>(null);
-  
+  const skillInputRef = useRef<HTMLInputElement>(null);
+  const profilePictureInputRef = useRef<HTMLInputElement>(null);
+  const certificateFileInputRef = useRef<HTMLInputElement>(null);
+
   const userIdFromQuery = searchParams.get('userId');
 
   const userIdToFetch = useMemo(() => {
     if (currentUser?.role === 'admin' && userIdFromQuery) {
-        return userIdFromQuery;
+      return userIdFromQuery;
     }
     return currentUser?.id;
   }, [currentUser, userIdFromQuery]);
-  
-  const userDocRef = useMemoFirebase(() => 
+
+  const userDocRef = useMemoFirebase(() =>
     userIdToFetch && firestore ? doc(firestore, 'users', userIdToFetch) : null,
     [firestore, userIdToFetch]
   );
   const { data: targetUser, isLoading: userLoading } = useDoc<Student>(userDocRef);
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!userIdToFetch || !firestore) return null;
-    return query(collection(firestore, 'projects'), where("studentId", "==", userIdToFetch));
-  }, [firestore, userIdToFetch]);
+  const projectsQuery = useMemoFirebase(() => 
+    userIdToFetch && firestore ? query(collection(firestore, 'projects'), where("studentId", "==", userIdToFetch)) : null, 
+    [firestore, userIdToFetch]
+  );
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
-  const achievementsQuery = useMemoFirebase(() => {
-    if (!userIdToFetch || !firestore) return null;
-    return query(collection(firestore, 'achievements'), where("studentId", "==", userIdToFetch));
-  }, [firestore, userIdToFetch]);
+  const achievementsQuery = useMemoFirebase(() => 
+    userIdToFetch && firestore ? query(collection(firestore, 'achievements'), where("studentId", "==", userIdToFetch)) : null,
+    [firestore, userIdToFetch]
+  );
   const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
 
-  const certificatesQuery = useMemoFirebase(() => userIdToFetch && firestore ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, [firestore, userIdToFetch]);
+  const certificatesQuery = useMemoFirebase(() => 
+    userIdToFetch && firestore ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, 
+    [firestore, userIdToFetch]
+  );
   const { data: certificates, isLoading: certificatesLoading } = useCollection<Certificate>(certificatesQuery);
-
+  
   const [skillInput, setSkillInput] = useState('');
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('Başlanğıc');
-  const skillInputRef = useRef<HTMLInputElement>(null);
-  const profilePictureInputRef = useRef<HTMLInputElement>(null);
-  const certificateFileInputRef = useRef<HTMLInputElement>(null);
+
+  const profileForm = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    mode: 'onChange',
+  });
+  
+  const projectForm = useForm<z.infer<typeof projectSchema>>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: { title: '', description: '', role: '', teamMembers: [], link: '', status: 'davam edir' }
+  });
+
+  const achievementForm = useForm<z.infer<typeof achievementSchema>>({
+    resolver: zodResolver(achievementSchema),
+    defaultValues: { name: '', description: '', position: '', level: 'Universitet', date: '', link: '' }
+  });
+  
+  const certificateForm = useForm<z.infer<typeof certificateSchema>>({
+    resolver: zodResolver(certificateSchema),
+    defaultValues: { name: '', level: 'Universitet', certificateURL: '' }
+  });
 
   const triggerTalentScoreUpdate = useCallback(async (userId: string) => {
     if (!firestore) return;
@@ -164,15 +176,9 @@ function EditProfilePageComponent() {
             };
         }));
 
-        if (allStudentsContext.length === 0) {
-            console.warn("No students found to compare against for talent score calculation.");
-            return;
-        }
+        if (allStudentsContext.length === 0) return;
         
-        const scoreResult = await calculateTalentScore({
-            targetStudentId: userId,
-            allStudents: allStudentsContext as any,
-        });
+        const scoreResult = await calculateTalentScore({ targetStudentId: userId, allStudents: allStudentsContext as any });
         
         const targetUserDoc = doc(firestore, 'users', userId);
         await updateDocumentNonBlocking(targetUserDoc, { talentScore: scoreResult.talentScore });
@@ -184,35 +190,10 @@ function EditProfilePageComponent() {
   }, [firestore, toast]);
   
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!authLoading && !currentUser) {
       router.push('/login');
     }
-  }, [currentUser, loading, router]);
-
-
-  const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    mode: 'onChange',
-  });
-  
-  const { control: profileControl, watch: watchProfile, setValue: setProfileValue } = profileForm;
-  const skills = watchProfile('skills', []);
-  const profilePictureUrl = watchProfile('profilePictureUrl');
-
-  const projectForm = useForm<z.infer<typeof projectSchema>>({
-    resolver: zodResolver(projectSchema),
-    defaultValues: { title: '', description: '', role: '', teamMembers: [], link: '', status: 'davam edir' }
-  });
-
-  const achievementForm = useForm<z.infer<typeof achievementSchema>>({
-    resolver: zodResolver(achievementSchema),
-    defaultValues: { name: '', description: '', position: '', level: 'Universitet', date: '', link: '' }
-  });
-  
-  const certificateForm = useForm<z.infer<typeof certificateSchema>>({
-    resolver: zodResolver(certificateSchema),
-    defaultValues: { name: '', level: 'Universitet', certificateURL: '' }
-  });
+  }, [currentUser, authLoading, router]);
 
   useEffect(() => {
     if (targetUser) {
@@ -223,7 +204,7 @@ function EditProfilePageComponent() {
         major: targetUser.major || '',
         courseYear: targetUser.courseYear || 1,
         educationForm: targetUser.educationForm || '',
-        gpa: targetUser.gpa || null,
+        gpa: targetUser.gpa ?? null,
         skills: targetUser.skills || [],
         successStory: targetUser.successStory || '',
         linkedInURL: targetUser.linkedInURL || '',
@@ -241,7 +222,6 @@ function EditProfilePageComponent() {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-
     const endpoint = type === 'sekil' ? '/api/upload/sekiller' : '/api/upload/senedler';
 
     try {
@@ -264,25 +244,20 @@ function EditProfilePageComponent() {
   const onProfilePictureChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageSrc(reader.result as string);
-        setEditorOpen(true);
-      };
-      reader.readAsDataURL(file);
+      setImageSrc(URL.createObjectURL(file));
+      setEditorOpen(true);
     }
-     e.target.value = '';
+    e.target.value = '';
   };
 
   const handleSaveCroppedImage = async () => {
     if (editorRef.current) {
-      const canvas = editorRef.current.getImageScaledToCanvas();
-      canvas.toBlob(async (blob) => {
+      editorRef.current.getImageScaledToCanvas().toBlob(async (blob) => {
         if (blob) {
           const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
           const url = await handleFileUpload(file, 'sekil');
           if (url) {
-            setProfileValue('profilePictureUrl', url, { shouldValidate: true, shouldDirty: true });
+            profileForm.setValue('profilePictureUrl', url, { shouldValidate: true, shouldDirty: true });
             if (currentUser && userDocRef && currentUser.id === userDocRef.id) {
               updateUser({ ...currentUser, profilePictureUrl: url });
             }
@@ -295,65 +270,42 @@ function EditProfilePageComponent() {
   };
 
   const onProfileSubmit: SubmitHandler<z.infer<typeof profileSchema>> = async (data) => {
-    if (!targetUser || !userDocRef) {
-      toast({ variant: "destructive", title: "Xəta", description: "İstifadəçi məlumatları tapılmadı." });
-      return;
-    }
-      
+    if (!targetUser || !userDocRef) return;
     setIsSaving(true);
-
-    const updateData: { [key: string]: any } = { ...data };
-    updateData.gpa = Number(updateData.gpa) || 0;
-    
-    await updateDocumentNonBlocking(userDocRef, updateData);
-
-    if (currentUser && currentUser.id === targetUser.id) {
-      updateUser(updateData);
-    }
-    
-    toast({ title: "Profil məlumatları yadda saxlanıldı", description: "Dəyişikliklər uğurla tətbiq edildi." });
+    await updateDocumentNonBlocking(userDocRef, { ...data, gpa: Number(data.gpa) || 0 });
+    if (currentUser && currentUser.id === targetUser.id) updateUser(data);
+    toast({ title: "Profil məlumatları yadda saxlanıldı." });
     setIsSaving(false);
-    
     triggerTalentScoreUpdate(targetUser.id);
   };
   
   const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = async (data) => {
-    if (!targetUser || !firestore) return;
+    if (!userIdToFetch || !firestore) return;
     const projectCollectionRef = collection(firestore, `projects`);
-    await addDocumentNonBlocking(projectCollectionRef, { 
-      ...data, 
-      studentId: targetUser.id, 
-      ownerType: 'student',
-      teamMemberIds: [], 
-      invitedStudentIds: [] 
-    });
+    await addDocumentNonBlocking(projectCollectionRef, { ...data, studentId: userIdToFetch, ownerType: 'student', teamMemberIds: [], invitedStudentIds: [] });
     projectForm.reset();
     toast({ title: "Layihə əlavə edildi" });
-    triggerTalentScoreUpdate(targetUser.id); 
+    triggerTalentScoreUpdate(userIdToFetch);
   };
   
   const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = async (data) => {
-    if (!targetUser || !firestore) return;
+    if (!userIdToFetch || !firestore) return;
     const achievementCollectionRef = collection(firestore, `achievements`);
-    await addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: targetUser.id });
+    await addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: userIdToFetch });
     achievementForm.reset();
     toast({ title: "Nailiyyət əlavə edildi" });
-    triggerTalentScoreUpdate(targetUser.id);
+    triggerTalentScoreUpdate(userIdToFetch);
   };
   
  const onCertificateSubmit: SubmitHandler<z.infer<typeof certificateSchema>> = async (data) => {
-    if (!targetUser || !firestore) return;
-
-    let finalCertificateURL = data.certificateURL;
+    if (!userIdToFetch || !firestore) return;
     const fileInput = certificateFileInputRef.current;
+    let finalCertificateURL = data.certificateURL;
     
-    if (fileInput && fileInput.files && fileInput.files[0]) {
+    if (fileInput?.files?.[0]) {
         const url = await handleFileUpload(fileInput.files[0], 'sened');
-        if (url) {
-            finalCertificateURL = url;
-        } else {
-            return;
-        }
+        if (!url) return;
+        finalCertificateURL = url;
     }
 
     if (!finalCertificateURL) {
@@ -361,46 +313,37 @@ function EditProfilePageComponent() {
         return;
     }
 
-    const certificateCollectionRef = collection(firestore, `users/${targetUser.id}/certificates`);
-    await addDocumentNonBlocking(certificateCollectionRef, { ...data, certificateURL: finalCertificateURL, studentId: targetUser.id });
+    const certificateCollectionRef = collection(firestore, `users/${userIdToFetch}/certificates`);
+    await addDocumentNonBlocking(certificateCollectionRef, { ...data, certificateURL: finalCertificateURL, studentId: userIdToFetch });
     
     certificateForm.reset();
     if(fileInput) fileInput.value = '';
     
     toast({ title: "Sertifikat əlavə edildi" });
-    triggerTalentScoreUpdate(targetUser.id);
+    triggerTalentScoreUpdate(userIdToFetch);
   };
 
   const handleDelete = async (docId: string, itemType: 'project' | 'achievement' | 'certificate') => {
-      if (!targetUser || !firestore) return;
-      
-      let docRef: DocumentReference;
-      
-      switch (itemType) {
-          case 'project': 
-            docRef = doc(firestore, `projects`, docId);
-            break;
-          case 'achievement': 
-            docRef = doc(firestore, `achievements`, docId);
-            break;
-          case 'certificate': 
-            docRef = doc(firestore, `users/${targetUser.id}/certificates`, docId);
-            break;
-      }
-      
-      await deleteDocumentNonBlocking(docRef);
-
-      toast({ title: "Element silindi", description: "Seçilmiş element uğurla silindi." });
-      triggerTalentScoreUpdate(targetUser.id);
+    if (!userIdToFetch || !firestore) return;
+    let docRef: DocumentReference;
+    
+    switch (itemType) {
+        case 'project': docRef = doc(firestore, 'projects', docId); break;
+        case 'achievement': docRef = doc(firestore, 'achievements', docId); break;
+        case 'certificate': docRef = doc(firestore, `users/${userIdToFetch}/certificates`, docId); break;
+    }
+    await deleteDocumentNonBlocking(docRef);
+    toast({ title: "Element silindi" });
+    triggerTalentScoreUpdate(userIdToFetch);
   };
 
-  const handleSkillAdd = async () => {
+  const handleSkillAdd = () => {
     const trimmedInput = skillInput.trim();
     if (trimmedInput) {
         const newSkill: Skill = { name: trimmedInput, level: skillLevel };
         const currentSkills = profileForm.getValues('skills') || [];
-        if (!currentSkills.some(s => s && s.name && s.name.toLowerCase() === newSkill.name.toLowerCase())) {
-            setProfileValue('skills', [...currentSkills, newSkill], { shouldValidate: true, shouldDirty: true });
+        if (!currentSkills.some(s => s?.name?.toLowerCase() === newSkill.name.toLowerCase())) {
+            profileForm.setValue('skills', [...currentSkills, newSkill], { shouldValidate: true, shouldDirty: true });
             setSkillInput('');
             setSkillLevel('Başlanğıc');
             skillInputRef.current?.focus();
@@ -408,442 +351,200 @@ function EditProfilePageComponent() {
             toast({ variant: 'destructive', title: 'Bu bacarıq artıq mövcuddur.' });
         }
     }
-};
-
-  const handleSkillRemove = (skillToRemove: string) => {
-    setProfileValue('skills', (skills || []).filter(skill => skill.name !== skillToRemove));
   };
 
+  const handleSkillRemove = (skillToRemove: string) => {
+    profileForm.setValue('skills', (profileForm.getValues('skills') || []).filter(skill => skill.name !== skillToRemove), { shouldValidate: true, shouldDirty: true });
+  };
+  
+  if (authLoading || userLoading) return <div className="container mx-auto py-8 text-center">Yüklənir...</div>;
+  if (!targetUser) return <div className="container mx-auto py-8 text-center">İstifadəçi tapılmadı.</div>;
 
-  if (loading || userLoading) {
-    return <div className="container mx-auto py-8 text-center">Yüklənir...</div>;
-  }
-
-  if (!targetUser) {
-    return <div className="container mx-auto py-8 text-center">İstifadəçi tapılmadı.</div>
-  }
-
-  const getInitials = (firstName?: string, lastName?: string) => {
-    if (!firstName || !lastName) return '';
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`;
-  }
+  const getInitials = (firstName?: string, lastName?: string) => `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
 
   return (
     <>
-    <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>Profil Şəklini Tənzimlə</DialogTitle>
-                <DialogDescription>
-                    Şəkli yaxınlaşdırın və çərçivəyə uyğunlaşdırın.
-                </DialogDescription>
-            </DialogHeader>
-            {imageSrc && (
-                <div className="flex flex-col items-center gap-4">
-                     <AvatarEditor
-                        ref={editorRef}
-                        image={imageSrc}
-                        width={250}
-                        height={250}
-                        border={50}
-                        borderRadius={125}
-                        color={[0, 0, 0, 0.6]} // RGBA
-                        scale={zoom}
-                        rotate={0}
-                    />
-                     <div className="w-full max-w-xs space-y-2">
-                        <Label htmlFor="zoom">Yaxınlaşdırma</Label>
-                        <Slider
-                            id="zoom"
-                            min={1}
-                            max={3}
-                            step={0.1}
-                            value={[zoom]}
-                            onValueChange={(value) => setZoom(value[0])}
-                        />
-                    </div>
-                </div>
-            )}
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setEditorOpen(false)}>Ləğv et</Button>
-                <Button onClick={handleSaveCroppedImage} disabled={isUploading}>
-                    {isUploading ? "Yadda saxlanılır..." : "Yadda Saxla"}
-                </Button>
-            </DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Profil Şəklini Tənzimlə</DialogTitle>
+            <DialogDescription>Şəkli yaxınlaşdırın və çərçivəyə uyğunlaşdırın.</DialogDescription>
+          </DialogHeader>
+          {imageSrc && (
+            <div className="flex flex-col items-center gap-4">
+              <AvatarEditor ref={editorRef} image={imageSrc} width={250} height={250} border={50} borderRadius={125} color={[0, 0, 0, 0.6]} scale={zoom} rotate={0} />
+              <div className="w-full max-w-xs space-y-2">
+                <Label htmlFor="zoom">Yaxınlaşdırma</Label>
+                <Slider id="zoom" min={1} max={3} step={0.1} value={[zoom]} onValueChange={(value) => setZoom(value[0])} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>Ləğv et</Button>
+            <Button onClick={handleSaveCroppedImage} disabled={isUploading}>{isUploading ? "Yadda saxlanılır..." : "Yadda Saxla"}</Button>
+          </DialogFooter>
         </DialogContent>
-    </Dialog>
+      </Dialog>
 
+      <div className="container mx-auto max-w-4xl py-8 md:py-12 px-4">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Profili Redaktə Et</h1>
+          <p className="text-muted-foreground">Profil məlumatlarınızı, layihə və nailiyyətlərinizi buradan idarə edin.</p>
+        </div>
 
-    <div className="container mx-auto max-w-4xl py-8 md:py-12 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Profili Redaktə Et</h1>
-        <p className="text-muted-foreground">Profil məlumatlarınızı, layihə və nailiyyətlərinizi buradan idarə edin.</p>
-      </div>
-
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><UserIcon /> Şəxsi Məlumatlar</CardTitle>
-            <CardDescription>Əsas profil məlumatlarınızı, bacarıqlarınızı və sosial media hesablarınızı yeniləyin.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...profileForm}>
-              <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField name="firstName" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Ad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField name="lastName" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Soyad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-                 
-                 <FormItem>
+        <div className="space-y-8">
+          {/* Main Profile Form Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><UserIcon /> Şəxsi Məlumatlar</CardTitle>
+              <CardDescription>Əsas profil məlumatlarınızı, bacarıqlarınızı və sosial media hesablarınızı yeniləyin.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                  {/* ... Fields for personal info ... */}
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField name="firstName" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Ad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="lastName" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Soyad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  </div>
+                  <FormItem>
                     <FormLabel>Profil Şəkli</FormLabel>
                     <div className="flex items-center gap-4">
-                        <Avatar className="h-20 w-20">
-                            <AvatarImage src={profilePictureUrl} />
-                            <AvatarFallback>{getInitials(targetUser.firstName, targetUser.lastName)}</AvatarFallback>
-                        </Avatar>
-                        <Button type="button" onClick={() => profilePictureInputRef.current?.click()} disabled={isUploading}>
-                            <Upload className="mr-2 h-4 w-4" />
-                            {isUploading ? 'Yüklənir...' : 'Şəkil Dəyiş'}
-                        </Button>
-                        <Input 
-                            ref={profilePictureInputRef}
-                            type="file" 
-                            className="hidden" 
-                            accept="image/*"
-                            onChange={onProfilePictureChange}
-                        />
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage src={profileForm.watch('profilePictureUrl')} />
+                        <AvatarFallback>{getInitials(targetUser.firstName, targetUser.lastName)}</AvatarFallback>
+                      </Avatar>
+                      <Button type="button" onClick={() => profilePictureInputRef.current?.click()} disabled={isUploading}><Upload className="mr-2 h-4 w-4" />{isUploading ? 'Yüklənir...' : 'Şəkil Dəyiş'}</Button>
+                      <Input ref={profilePictureInputRef} type="file" className="hidden" accept="image/*" onChange={onProfilePictureChange} />
                     </div>
-                </FormItem>
+                  </FormItem>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                       <FormField name="major" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>İxtisas</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField name="courseYear" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Təhsil ili</FormLabel><Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="Təhsil ilini seçin" /></SelectTrigger></FormControl><SelectContent>{[1, 2, 3, 4, 5, 6].map(y => <SelectItem key={y} value={String(y)}>{y}-ci kurs</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                   </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField name="educationForm" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Təhsil Forması</FormLabel><FormControl><Input {...field} placeholder="Əyani / Qiyabi" /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField name="gpa" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Keçən ilki ÜOMG (GPA)</FormLabel><FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ''} placeholder="Məs: 85.5" /></FormControl><FormMessage /></FormItem> )} />
+                    </div>
+                   <FormField name="skills" control={profileForm.control} render={() => ( <FormItem><FormLabel>Bacarıqlar</FormLabel><div className="flex flex-col sm:flex-row items-center gap-2"><Input ref={skillInputRef} value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSkillAdd(); } }} placeholder="Bacarıq adı" className="w-full" /><div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0"><Select value={skillLevel} onValueChange={(value: SkillLevel) => setSkillLevel(value)}><SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Səviyyə seçin" /></SelectTrigger><SelectContent>{SKILL_LEVELS.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}</SelectContent></Select><Button type="button" onClick={handleSkillAdd} className="w-full sm:w-auto">Əlavə et</Button></div></div><FormMessage /><div className="flex flex-wrap gap-2 pt-2">{profileForm.getValues('skills')?.map((skill) => ( <Badge key={skill.name} variant="secondary" className="flex items-center gap-2 text-sm">{skill.name} <span className="text-xs opacity-70">({skill.level})</span><button type="button" onClick={() => handleSkillRemove(skill.name)} className="rounded-full hover:bg-muted-foreground/20 p-0.5"><X className="h-3 w-3" /></button></Badge> ))}</div></FormItem> )} />
+                  <Separator />
+                  <h3 className="text-lg font-medium">Uğur Hekayəsi</h3>
+                   <FormField control={profileForm.control} name="successStory" render={({ field }) => ( <FormItem><FormLabel>Uğur Hekayəm</FormLabel><FormControl><Textarea placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..." className="min-h-[100px]" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <Separator />
+                  <h3 className="text-lg font-medium">Sosial Linklər</h3>
+                   <FormField name="linkedInURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="githubURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>GitHub URL</FormLabel><FormControl><Input placeholder="https://github.com/..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                     <FormField name="behanceURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Behance URL</FormLabel><FormControl><Input placeholder="https://behance.net/..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                     <FormField name="instagramURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                     <FormField name="portfolioURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Portfolio URL</FormLabel><FormControl><Input placeholder="https://sizin-saytiniz.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="googleScholarURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>Google Scholar URL</FormLabel><FormControl><Input placeholder="https://scholar.google.com/citations?user=..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="youtubeURL" control={profileForm.control} render={({ field }) => ( <FormItem><FormLabel>YouTube URL</FormLabel><FormControl><Input placeholder="https://youtube.com/channel/..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <Button type="submit" disabled={isSaving || isUploading}>{isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}</Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
 
-
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <FormField name="major" control={profileForm.control} render={({ field }) => (
-                        <FormItem><FormLabel>İxtisas</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField name="courseYear" control={profileForm.control} render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Təhsil ili</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value ? String(field.value) : ""}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Təhsil ilini seçin" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {[1, 2, 3, 4, 5, 6].map(y => <SelectItem key={y} value={String(y)}>{y}-ci kurs</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                 </div>
+          {/* Projects Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Briefcase /> Layihələr</CardTitle>
+              <CardDescription>Gördüyünüz işləri və layihələri profilinizə əlavə edin.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...projectForm}>
+                <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-4">
+                  {/* ... Project form fields ... */}
+                   <FormField name="title" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Layihə Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <FormField name="description" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Təsvir</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <FormField name="teamMembers" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Komanda Üzvləri</FormLabel><FormControl><Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} placeholder="Adları vergül ilə ayırın" /></FormControl><FormMessage /></FormItem> )} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField name="educationForm" control={profileForm.control} render={({ field }) => (
-                      <FormItem><FormLabel>Təhsil Forması</FormLabel><FormControl><Input {...field} placeholder="Əyani / Qiyabi" /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField name="gpa" control={profileForm.control} render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Keçən ilki ÜOMG (GPA)</FormLabel>
-                        <FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ''} placeholder="Məs: 85.5" /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                    <FormField name="role" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Rolunuz</FormLabel><FormControl><Input {...field} placeholder="Məs: Developer, Dizayner" /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="status" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="davam edir">Davam edir</SelectItem><SelectItem value="tamamlanıb">Tamamlanıb</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
                   </div>
-                 <FormField name="skills" control={profileControl} render={() => (
-                    <FormItem>
-                        <FormLabel>Bacarıqlar</FormLabel>
-                        <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <Input
-                                ref={skillInputRef}
-                                value={skillInput}
-                                onChange={(e) => setSkillInput(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSkillAdd(); } }}
-                                placeholder="Bacarıq adı"
-                                className="w-full"
-                            />
-                            <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0">
-                                <Select value={skillLevel} onValueChange={(value: SkillLevel) => setSkillLevel(value)}>
-                                    <SelectTrigger className="w-full sm:w-[150px]">
-                                        <SelectValue placeholder="Səviyyə seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {SKILL_LEVELS.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Button type="button" onClick={handleSkillAdd} className="w-full sm:w-auto">Əlavə et</Button>
-                            </div>
-                        </div>
-                        <FormMessage />
-                        <div className="flex flex-wrap gap-2 pt-2">
-                            {skills && skills.map((skill) => (
-                                <Badge key={skill.name} variant="secondary" className="flex items-center gap-2 text-sm">
-                                    {skill.name} <span className="text-xs opacity-70">({skill.level})</span>
-                                    <button type="button" onClick={() => handleSkillRemove(skill.name)} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
-                                        <X className="h-3 w-3" />
-                                    </button>
-                                </Badge>
-                            ))}
-                        </div>
-                    </FormItem>
-                  )} />
-                <Separator />
-                <h3 className="text-lg font-medium">Uğur Hekayəsi</h3>
-                 <FormField
-                    control={profileForm.control}
-                    name="successStory"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Uğur Hekayəm</FormLabel>
-                        <FormControl>
-                            <Textarea
-                            placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..."
-                            className="min-h-[100px]"
-                            {...field}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                 />
-
-                <Separator />
-                <h3 className="text-lg font-medium">Sosial Linklər</h3>
-                 <FormField name="linkedInURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField name="githubURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>GitHub URL</FormLabel><FormControl><Input placeholder="https://github.com/..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                   <FormField name="behanceURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Behance URL</FormLabel><FormControl><Input placeholder="https://behance.net/..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                   <FormField name="instagramURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Instagram URL</FormLabel><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                   <FormField name="portfolioURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Portfolio URL</FormLabel><FormControl><Input placeholder="https://sizin-saytiniz.com" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField name="googleScholarURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Google Scholar URL</FormLabel><FormControl><Input placeholder="https://scholar.google.com/citations?user=..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField name="youtubeURL" control={profileForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>YouTube URL</FormLabel><FormControl><Input placeholder="https://youtube.com/channel/..." {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                <Button type="submit" disabled={isSaving || isUploading}>
-                  {isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-        
-        <Card>
+                  <FormField name="link" control={projectForm.control} render={({ field }) => ( <FormItem><FormLabel>Layihə Linki (GitHub, Vebsayt və s.)</FormLabel><FormControl><Input type="url" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <Button type="submit" disabled={isSaving || isUploading}><PlusCircle className="mr-2 h-4 w-4" />Layihə Əlavə Et</Button>
+                </form>
+              </Form>
+              <Separator className="my-6" />
+              <h4 className="text-md font-medium mb-4">Mövcud Layihələr</h4>
+              <div className="space-y-4">
+                {projectsLoading ? <p>Yüklənir...</p> : projects?.map(p => (
+                  <div key={p.id} className="flex justify-between items-center p-2 border rounded-md">
+                    <span>{p.title}</span>
+                    <AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle><AlertDialogDescription>Bu əməliyyat geri qaytarıla bilməz. "{p.title}" adlı layihə profilinizdən həmişəlik silinəcək.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Ləğv et</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id, 'project')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Achievements Card */}
+          <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Briefcase /> Layihələr</CardTitle>
-                <CardDescription>Gördüyünüz işləri və layihələri profilinizə əlavə edin.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Award /> Nailiyyətlər</CardTitle>
+              <CardDescription>Qazandığınız uğurları və mükafatları qeyd edin.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...projectForm}>
-                    <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-4">
-                        <FormField name="title" control={projectForm.control} render={({ field }) => (
-                            <FormItem><FormLabel>Layihə Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="description" control={projectForm.control} render={({ field }) => (
-                            <FormItem><FormLabel>Təsvir</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="teamMembers" control={projectForm.control} render={({ field }) => (
-                            <FormItem><FormLabel>Komanda Üzvləri</FormLabel><FormControl><Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} placeholder="Adları vergül ilə ayırın" /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField name="role" control={projectForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Rolunuz</FormLabel><FormControl><Input {...field} placeholder="Məs: Developer, Dizayner" /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField name="status" control={projectForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="davam edir">Davam edir</SelectItem>
-                                        <SelectItem value="tamamlanıb">Tamamlanıb</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage /></FormItem>
-                            )} />
-                        </div>
-                        <FormField name="link" control={projectForm.control} render={({ field }) => (
-                           <FormItem><FormLabel>Layihə Linki (GitHub, Vebsayt və s.)</FormLabel><FormControl><Input type="url" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <Button type="submit" disabled={isSaving || isUploading}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> {isSaving ? 'Əlavə edilir...' : 'Layihə Əlavə Et'}
-                        </Button>
-                    </form>
-                </Form>
-                 <Separator className="my-6" />
-                <h4 className="text-md font-medium mb-4">Mövcud Layihələr</h4>
-                <div className="space-y-4">
-                    {projectsLoading ? <p>Yüklənir...</p> : projects?.map(p => (
-                        <div key={p.id} className="flex justify-between items-center p-2 border rounded-md">
-                            <span>{p.title}</span>
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Bu əməliyyat geri qaytarıla bilməz. "{p.title}" adlı layihə profilinizdən həmişəlik silinəcək.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Ləğv et</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(p.id, 'project')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
-                </div>
+              <Form {...achievementForm}>
+                <form onSubmit={achievementForm.handleSubmit(onAchievementSubmit)} className="space-y-4">
+                  {/* ... Achievement form fields ... */}
+                   <FormField name="name" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Nailiyyətin Adı (Müsabiqə, Olimpiada və s.)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <FormField name="description" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Təsvir (Könüllü)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField name="position" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Tutduğunuz Yer/Dərəcə</FormLabel><FormControl><Input {...field} placeholder="Məs: 1-ci yer, Qızıl medal" /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="level" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Səviyyə</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{(['Universitet', 'Regional', 'Respublika', 'Beynəlxalq'] as AchievementLevel[]).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField name="date" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Tarix</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <FormField name="link" control={achievementForm.control} render={({ field }) => ( <FormItem><FormLabel>Təsdiq Linki (Könüllü)</FormLabel><FormControl><Input type="url" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                  </div>
+                  <Button type="submit" disabled={isSaving || isUploading}><PlusCircle className="mr-2 h-4 w-4" />Nailiyyət Əlavə Et</Button>
+                </form>
+              </Form>
+              <Separator className="my-6" />
+              <h4 className="text-md font-medium mb-4">Mövcud Nailiyyətlər</h4>
+              <div className="space-y-4">
+                {achievementsLoading ? <p>Yüklənir...</p> : achievements?.map(a => (
+                  <div key={a.id} className="flex justify-between items-center p-2 border rounded-md">
+                    <span>{a.name} - {a.position}</span>
+                    <AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle><AlertDialogDescription>Bu əməliyyat geri qaytarıla bilməz. "{a.name}" adlı nailiyyət profilinizdən həmişəlik silinəcək.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Ləğv et</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(a.id, 'achievement')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                  </div>
+                ))}
+              </div>
             </CardContent>
-        </Card>
-        
-         <Card>
+          </Card>
+          
+          {/* Certificates Card */}
+          <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Award /> Nailiyyətlər</CardTitle>
-                <CardDescription>Qazandığınız uğurları və mükafatları qeyd edin.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><FileText /> Sertifikatlar</CardTitle>
+              <CardDescription>Əldə etdiyiniz sertifikatları profilinizə əlavə edin.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <Form {...achievementForm}>
-                    <form onSubmit={achievementForm.handleSubmit(onAchievementSubmit)} className="space-y-4">
-                         <FormField name="name" control={achievementForm.control} render={({ field }) => (
-                            <FormItem><FormLabel>Nailiyyətin Adı (Müsabiqə, Olimpiada və s.)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="description" control={achievementForm.control} render={({ field }) => (
-                            <FormItem><FormLabel>Təsvir (Könüllü)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField name="position" control={achievementForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Tutduğunuz Yer/Dərəcə</FormLabel><FormControl><Input {...field} placeholder="Məs: 1-ci yer, Qızıl medal" /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField name="level" control={achievementForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Səviyyə</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {(['Universitet', 'Regional', 'Respublika', 'Beynəlxalq'] as AchievementLevel[]).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage /></FormItem>
-                            )} />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField name="date" control={achievementForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Tarix</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField name="link" control={achievementForm.control} render={({ field }) => (
-                                <FormItem><FormLabel>Təsdiq Linki (Könüllü)</FormLabel><FormControl><Input type="url" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                        </div>
-                        <Button type="submit" disabled={isSaving || isUploading}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> {isSaving ? 'Əlavə edilir...' : 'Nailiyyət Əlavə Et'}
-                        </Button>
-                    </form>
-                </Form>
-                 <Separator className="my-6" />
-                <h4 className="text-md font-medium mb-4">Mövcud Nailiyyətlər</h4>
-                <div className="space-y-4">
-                    {achievementsLoading ? <p>Yüklənir...</p> : achievements?.map(a => (
-                        <div key={a.id} className="flex justify-between items-center p-2 border rounded-md">
-                            <span>{a.name} - {a.position}</span>
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Bu əməliyyat geri qaytarıla bilməz. "{a.name}" adlı nailiyyət profilinizdən həmişəlik silinəcək.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Ləğv et</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(a.id, 'achievement')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
-                </div>
+              <Form {...certificateForm}>
+                <form onSubmit={certificateForm.handleSubmit(onCertificateSubmit)} className="space-y-4">
+                  {/* ... Certificate form fields ... */}
+                   <FormField name="name" control={certificateForm.control} render={({ field }) => ( <FormItem><FormLabel>Sertifikatın Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                   <FormItem><FormLabel>Sertifikat Faylı</FormLabel><FormControl><Input type="file" ref={certificateFileInputRef} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={isUploading} /></FormControl><FormMessage /></FormItem>
+                   <FormField name="level" control={certificateForm.control} render={({ field }) => ( <FormItem><FormLabel>Səviyyə</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{(['Universitet', 'Regional', 'Respublika', 'Beynəlxalq'] as AchievementLevel[]).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
+                  <Button type="submit" disabled={isSaving || isUploading}><PlusCircle className="mr-2 h-4 w-4" />Sertifikat Əlavə Et</Button>
+                </form>
+              </Form>
+              <Separator className="my-6" />
+              <h4 className="text-md font-medium mb-4">Mövcud Sertifikatlar</h4>
+              <div className="space-y-4">
+                {certificatesLoading ? <p>Yüklənir...</p> : certificates?.map(c => (
+                  <div key={c.id} className="flex justify-between items-center p-2 border rounded-md">
+                    <a href={c.certificateURL} target="_blank" rel="noopener noreferrer" className="hover:underline">{c.name}</a>
+                    <AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle><AlertDialogDescription>Bu əməliyyat geri qaytarılmazdır. "{c.name}" adlı sertifikat profilinizdən həmişəlik silinəcək.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Ləğv et</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c.id, 'certificate')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                  </div>
+                ))}
+              </div>
             </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText /> Sertifikatlar</CardTitle>
-            <CardDescription>
-              Əldə etdiyiniz sertifikatları profilinizə əlavə edin.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...certificateForm}>
-              <form onSubmit={certificateForm.handleSubmit(onCertificateSubmit)} className="space-y-4">
-                <FormField name="name" control={certificateForm.control} render={({ field }) => (
-                  <FormItem><FormLabel>Sertifikatın Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                 <FormItem>
-                    <FormLabel>Sertifikat Faylı</FormLabel>
-                    <FormControl>
-                         <Input type="file" ref={certificateFileInputRef} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={isUploading} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                 <FormField name="level" control={certificateForm.control} render={({ field }) => (
-                    <FormItem><FormLabel>Səviyyə</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                              {(['Universitet', 'Regional', 'Respublika', 'Beynəlxalq'] as AchievementLevel[]).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage /></FormItem>
-                )} />
-                <Button type="submit" disabled={isSaving || isUploading}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> {isUploading ? 'Yüklənir...' : (isSaving ? 'Əlavə edilir...' : 'Sertifikat Əlavə Et')}
-                </Button>
-              </form>
-            </Form>
-            <Separator className="my-6" />
-            <h4 className="text-md font-medium mb-4">Mövcud Sertifikatlar</h4>
-            <div className="space-y-4">
-              {certificatesLoading ? <p>Yüklənir...</p> : certificates?.map(c => (
-                <div key={c.id} className="flex justify-between items-center p-2 border rounded-md">
-                  <a href={c.certificateURL} target="_blank" rel="noopener noreferrer" className="hover:underline">{c.name}</a>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Silməni təsdiq edirsiniz?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Bu əməliyyat geri qaytarılmazdır. "{c.name}" adlı sertifikat profilinizdən həmişəlik silinəcək.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Ləğv et</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(c.id, 'certificate')} className="bg-destructive hover:bg-destructive/90">Bəli, sil</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
+          </Card>
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -853,7 +554,5 @@ export default function EditProfilePage() {
     <Suspense fallback={<div className="container mx-auto py-8 text-center">Yüklənir...</div>}>
       <EditProfilePageComponent />
     </Suspense>
-  )
+  );
 }
-
-    
