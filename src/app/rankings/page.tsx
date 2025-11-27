@@ -15,25 +15,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { students as allStudents, faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
+import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { faculties as staticFaculties, categories as staticCategories } from '@/lib/placeholder-data';
 
 
 export default function RankingsPage() {
   const [facultyFilter, setFacultyFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const firestore = useFirestore();
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [faculties, setFaculties] = useState<FacultyData[]>([]);
-  const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const studentsQuery = useMemoFirebase(() => 
+    firestore 
+      ? query(collection(firestore, 'users'), where('role', '==', 'student'), where('status', '==', 'təsdiqlənmiş')) 
+      : null,
+    [firestore]
+  );
+  const { data: students, isLoading } = useCollectionOptimized<Student>(studentsQuery);
+  const [faculties] = useState<FacultyData[]>(staticFaculties);
+  const [categories] = useState<CategoryData[]>(staticCategories);
 
-  useEffect(() => {
-    // Simulate fetching data
-    setStudents(allStudents.filter(s => s.status === 'təsdiqlənmiş'));
-    setFaculties(allFaculties);
-    setCategories(allCategories);
-    setIsLoading(false);
-  }, []);
 
   const rankedStudents = useMemo(() => {
     if (!students) return [];
@@ -68,28 +69,24 @@ export default function RankingsPage() {
             </div>
 
             <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
-                {isLoading ? <Skeleton className="h-10 w-full" /> : (
-                    <Select value={facultyFilter} onValueChange={setFacultyFilter}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Fakültə seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Bütün Fakültələr</SelectItem>
-                        {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-                )}
-                {isLoading ? <Skeleton className="h-10 w-full" /> : (
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Kateqoriya seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
-                        {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-                )}
+                <Select value={facultyFilter} onValueChange={setFacultyFilter}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Fakültə seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Bütün Fakültələr</SelectItem>
+                    {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
+                </SelectContent>
+                </Select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Kateqoriya seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
+                    {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+                </Select>
             </div>
 
             {isLoading ? (

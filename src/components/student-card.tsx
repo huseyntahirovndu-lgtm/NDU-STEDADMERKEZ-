@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 interface StudentCardProps {
@@ -35,20 +35,10 @@ const categoryColors: { [key: string]: string } = {
 };
 
 
-export function StudentCard({ student: initialStudent, className }: StudentCardProps) {
+export function StudentCard({ student, className }: StudentCardProps) {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const firestore = useFirestore();
-
-  const studentDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', initialStudent.id) : null, [firestore, initialStudent.id]);
-  // Şəkili canlı olaraq Firestore-dan çəkmək üçün useDoc istifadə edirik
-  const { data: liveStudentData } = useDoc<{ profilePictureUrl?: string }>(studentDocRef);
-
-  // Əsas məlumatları lokaldan götürürük, amma şəkli canlı datadan yeniləyirik
-  const student = {
-      ...initialStudent,
-      profilePictureUrl: liveStudentData?.profilePictureUrl ?? initialStudent.profilePictureUrl
-  };
 
   const organization = user?.role === 'organization' ? user as Organization : null;
   const isSaved = organization?.savedStudentIds?.includes(student.id);
@@ -69,28 +59,23 @@ export function StudentCard({ student: initialStudent, className }: StudentCardP
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent link navigation
-    if (!organization) return;
+    if (!organization || !firestore) return;
 
+    const orgDocRef = doc(firestore, 'users', organization.id);
     const currentSavedIds = organization.savedStudentIds || [];
     const newSavedStudentIds = isSaved
       ? currentSavedIds.filter(id => id !== student.id)
       : [...currentSavedIds, student.id];
 
-    const updatedOrg = { ...organization, savedStudentIds: newSavedStudentIds };
-    const success = updateUser(updatedOrg);
+    updateDocumentNonBlocking(orgDocRef, { savedStudentIds: newSavedStudentIds });
+    
+    // Also update local user state for immediate UI feedback
+    updateUser({ ...organization, savedStudentIds: newSavedStudentIds });
 
-    if (success) {
-        toast({
-          title: isSaved ? "Siyahıdan çıxarıldı" : "Yadda saxlanıldı",
-          description: `${student.firstName} ${student.lastName} ${isSaved ? 'yaddaş siyahısından çıxarıldı.' : 'yaddaş siyahısına əlavə edildi.'}`,
-        });
-    } else {
-        toast({
-            variant: 'destructive',
-            title: 'Xəta',
-            description: 'Əməliyyat zamanı xəta baş verdi.'
-        })
-    }
+    toast({
+      title: isSaved ? "Siyahıdan çıxarıldı" : "Yadda saxlanıldı",
+      description: `${student.firstName} ${student.lastName} ${isSaved ? 'yaddaş siyahısından çıxarıldı.' : 'yaddaş siyahısına əlavə edildi.'}`,
+    });
   };
 
 

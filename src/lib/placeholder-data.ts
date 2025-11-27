@@ -1,8 +1,7 @@
 import { Student, StudentOrganization, Admin, Project, Achievement, Certificate, News, StudentOrgUpdate, FacultyData, CategoryData, AppUser } from '@/types';
 
-// Bu fayl artıq əsas məlumat mənbəyi deyil.
-// Yalnız ilkin yükləmə və ya oflayn rejim üçün ehtiyat məlumatları saxlayır.
-// Əsas məlumatlar birbaşa Firestore-dan "canlı" olaraq çəkilir.
+// Bu fayl artıq yalnız dəyişməyən, statik məlumatları saxlayır.
+// Bütün dinamik məlumatlar (tələbələr, layihələr və s.) birbaşa Firestore-dan "canlı" olaraq çəkilir.
 
 export const adminUser: Admin = {
   id: "admin_user",
@@ -37,6 +36,7 @@ export const categories: CategoryData[] = [
     { id: '9', name: 'Media və yaradıcılıq' }
 ];
 
+// Bu massivlər artıq boşdur, çünki məlumatlar birbaşa Firestore-dan gəlir.
 export const students: Student[] = [];
 export const studentOrganizations: StudentOrganization[] = [];
 export const projects: Project[] = [];
@@ -45,6 +45,7 @@ export const certificates: Certificate[] = [];
 export const studentOrgUpdates: StudentOrgUpdate[] = [];
 export const news: News[] = [];
 
+// Bu massiv də artıq istifadə edilmir.
 export const allUsers: AppUser[] = [
     adminUser,
     ...students,

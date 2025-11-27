@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   Library,
   Users,
-  RefreshCw
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +26,7 @@ import Link from "next/link";
 import { Student, StudentOrganization } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollectionOptimized, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { useMemo } from 'react';
 
 
@@ -43,19 +42,18 @@ export default function AdminDashboard() {
 
   const isLoading = adminLoading || studentsLoading || orgsLoading;
   
-  const recentStudents = useMemo(() => {
-    if (!students) return [];
-    return [...students].sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-        return dateB.getTime() - dateA.getTime();
-    }).slice(0, 5);
-  }, [students]);
+  const recentStudentsQuery = useMemoFirebase(() => 
+    firestore 
+      ? query(collection(firestore, 'users'), where('role', '==', 'student'), orderBy('createdAt', 'desc'), limit(5)) 
+      : null, 
+    [firestore]
+  );
+  const { data: recentStudents, isLoading: recentStudentsLoading } = useCollectionOptimized<Student>(recentStudentsQuery);
   
   const totalStudents = students?.length || 0;
   const totalStudentOrgs = studentOrgs?.length || 0;
 
-  if (isLoading) {
+  if (isLoading || recentStudentsLoading) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <div className="text-center">
@@ -132,12 +130,12 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentStudents.length === 0 ? (
+                  {recentStudents && recentStudents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center">Heç bir tələbə tapılmadı</TableCell>
                     </TableRow>
                   ) : (
-                    recentStudents.map((student: Student) => (
+                    recentStudents && recentStudents.map((student: Student) => (
                       <TableRow key={student.id}>
                         <TableCell>
                           <div className="font-medium">{student.firstName} {student.lastName}</div>
