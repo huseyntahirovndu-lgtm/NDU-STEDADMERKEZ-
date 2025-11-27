@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -16,12 +17,11 @@ import { Student, Project, CategoryData, Achievement, StudentOrganization, News 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDoc, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { selectTopStories } from '@/app/actions';
 import { format } from 'date-fns';
-import { initializeServerFirebase } from '@/firebase/server-init';
-
-export const dynamic = 'force-dynamic';
+import { useEffect, useState, useMemo } from 'react';
 
 interface EnrichedProject extends Project {
     student?: Student;
@@ -55,93 +55,101 @@ const SuccessStoryCard = ({ story }: { story: SuccessStory }) => (
     </Card>
 );
 
-export default async function HomePage() {
-  const { firestore } = initializeServerFirebase();
-
-  // Fetch all data in parallel on the server
-  const [
-    studentsSnap,
-    studentOrgsSnap,
-    categoriesSnap,
-    newsSnap,
-    projectsSnap,
-    achievementsSnap
-  ] = await Promise.all([
-    getDocs(query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student"))),
-    getDocs(query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş"))),
-    getDocs(collection(firestore, "categories")),
-    getDocs(query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3))),
-    getDocs(query(collection(firestore, "projects"), orderBy('studentId'), limit(3))),
-    getDocs(collection(firestore, 'achievements')),
-  ]);
-
-  const students = studentsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Student[];
-  const studentOrgs = studentOrgsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as StudentOrganization[];
-  const categories = categoriesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as CategoryData[];
-  const latestNews = newsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as News[];
-  const projectsData = projectsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Project[];
-  const achievementsData = achievementsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Achievement[];
-
-  // --- Start server-side data processing ---
-
-  const sortedByTalent = [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
-  const topTalents = sortedByTalent.slice(0, 10);
-
-  const sortedByDate = [...students].sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0));
-  const newMembers = sortedByDate.slice(0, 5);
-
-  const allSkills = students.flatMap(s => s.skills || []).map(s => s.name);
-  const skillCounts = allSkills.reduce((acc, skill) => {
-      acc[skill] = (acc[skill] || 0) + 1;
-      return acc;
-  }, {} as Record<string, number>);
-  const popularSkills = Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]).slice(0, 10);
+// This function is intended to run on the server, but called from client
+async function getSuccessStories(firestore: any, students: Student[] | null): Promise<SuccessStory[]> {
+  if (!students || students.length === 0) return [];
+    const storiesToConsider = students
+        .filter(s => s.successStory && s.successStory.trim().length > 10)
+        .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory!, profilePictureUrl: s.profilePictureUrl }));
   
-  // Enrich projects with student data
-  const strongestProjects: EnrichedProject[] = await Promise.all(projectsData.map(async (project) => {
-      const studentDoc = await getDoc(doc(firestore, 'users', project.studentId));
-      if (studentDoc.exists()) {
-          return { ...project, student: studentDoc.data() as Student };
-      }
-      return project;
-  }));
+    if (storiesToConsider.length === 0) {
+        return [];
+    }
 
-  // Select success stories
-  let successStories: SuccessStory[] = [];
-  const storiesToConsider = students
-      .filter(s => s.successStory && s.successStory.trim().length > 10)
-      .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory!, profilePictureUrl: s.profilePictureUrl }));
+    try {
+        const result = await selectTopStories({ stories: storiesToConsider });
+        const storiesWithPics = result.selectedStories.map(s => {
+            const originalStudent = storiesToConsider.find(stc => stc.id === s.studentId);
+            return { ...s, profilePictureUrl: originalStudent?.profilePictureUrl };
+        });
+        return storiesWithPics;
+    } catch (error) {
+        console.error("AI story selection failed, using fallback:", error);
+        // Fallback to simply taking the first 2 stories if AI fails
+        return storiesToConsider.slice(0, 2).map(s => ({
+            studentId: s.id,
+            name: `${s.firstName} ${s.lastName}`,
+            faculty: s.faculty,
+            story: s.successStory,
+            profilePictureUrl: s.profilePictureUrl
+        }));
+    }
+}
 
-  if (storiesToConsider.length > 0) {
-      if (storiesToConsider.length <= 2) {
-          successStories = storiesToConsider.map(s => ({
-              studentId: s.id,
-              name: `${s.firstName} ${s.lastName}`,
-              faculty: s.faculty,
-              story: s.successStory,
-              profilePictureUrl: s.profilePictureUrl
-          }));
-      } else {
-          try {
-              const result = await selectTopStories({ stories: storiesToConsider });
-              successStories = result.selectedStories.map(s => {
-                  const originalStudent = storiesToConsider.find(stc => stc.id === s.studentId);
-                  return { ...s, profilePictureUrl: originalStudent?.profilePictureUrl };
-              });
-          } catch (error) {
-              console.error("AI story selection failed, using fallback:", error);
-              successStories = storiesToConsider.slice(0, 2).map(s => ({
-                   studentId: s.id,
-                   name: `${s.firstName} ${s.lastName}`,
-                   faculty: s.faculty,
-                   story: s.successStory,
-                   profilePictureUrl: s.profilePictureUrl
-              }));
-          }
-      }
-  }
 
-  // --- End server-side data processing ---
+export default function HomePage() {
+  const firestore = useFirestore();
+  
+  // --- Client-side Data Fetching ---
+  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, [firestore]);
+  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")): null, [firestore]);
+  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
+  const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)): null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), limit(3)): null, [firestore]);
+  const achievementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'achievements'): null, [firestore]);
+  
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: studentOrgs, isLoading: orgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
+  const { data: latestNews, isLoading: newsLoading } = useCollection<News>(newsQuery);
+  const { data: projectsData, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
+  const { data: achievementsData, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+
+  const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
+  const [enrichedProjects, setEnrichedProjects] = useState<EnrichedProject[]>([]);
+  
+  const isLoading = studentsLoading || orgsLoading || categoriesLoading || newsLoading || projectsLoading || achievementsLoading;
+
+  useEffect(() => {
+    async function processData() {
+        if (!firestore || !students || !projectsData) return;
+
+        // Enrich projects with student data
+        const projectsPromises = projectsData.map(async (project) => {
+            const studentDoc = await getDoc(doc(firestore, 'users', project.studentId));
+            return studentDoc.exists() ? { ...project, student: studentDoc.data() as Student } : project;
+        });
+        const resolvedProjects = await Promise.all(projectsPromises);
+        setEnrichedProjects(resolvedProjects);
+
+    }
+    processData();
+  }, [firestore, students, projectsData]);
+
+  useEffect(() => {
+    if(firestore && students){
+        getSuccessStories(firestore, students).then(setSuccessStories);
+    }
+  }, [firestore, students]);
+
+
+  // --- Client-side Data Processing ---
+  const sortedByTalent = useMemo(() => students ? [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0)) : [], [students]);
+  const topTalents = useMemo(() => sortedByTalent.slice(0, 10), [sortedByTalent]);
+
+  const sortedByDate = useMemo(() => students ? [...students].sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0)) : [], [students]);
+  const newMembers = useMemo(() => sortedByDate.slice(0, 5), [sortedByDate]);
+  
+  const popularSkills = useMemo(() => {
+      if(!students) return [];
+      const allSkills = students.flatMap(s => s.skills || []).map(s => s.name);
+      const skillCounts = allSkills.reduce((acc, skill) => {
+          acc[skill] = (acc[skill] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+      return Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]).slice(0, 10);
+  }, [students]);
+  
 
   return (
     <div className="flex flex-col">
@@ -165,22 +173,22 @@ export default async function HomePage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Ümumi Tələbə Sayı"
-                value={students.length.toString()}
+                value={isLoading ? '...' : (students?.length || 0).toString()}
                 icon={Users}
               />
               <StatCard
                 title="Tələbə Təşkilatları"
-                value={studentOrgs.length.toString()}
+                value={isLoading ? '...' : (studentOrgs?.length || 0).toString()}
                 icon={Library}
               />
               <StatCard
                 title="Aktiv Layihələr"
-                value={(projectsData?.length || 0).toString()}
+                value={isLoading ? '...' : (projectsData?.length || 0).toString()}
                 icon={Lightbulb}
               />
               <StatCard
                 title="Ümumi Uğurlar"
-                value={(achievementsData?.length || 0).toString()}
+                value={isLoading ? '...' : (achievementsData?.length || 0).toString()}
                 icon={Trophy}
               />
             </div>
@@ -209,7 +217,7 @@ export default async function HomePage() {
                   <h2 className="text-3xl md:text-4xl font-bold">Son Xəbərlər</h2>
                   <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Universitet və tələbə həyatı ilə bağlı ən son yeniliklər.</p>
               </div>
-              {latestNews.length > 0 ? (
+              {latestNews && latestNews.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       {latestNews.map(newsItem => (
                          <Link key={newsItem.id} href={`/xeberler/${newsItem.slug}`} className="block group">
@@ -235,7 +243,7 @@ export default async function HomePage() {
                       <p>Hələlik heç bir xəbər yoxdur.</p>
                   </div>
               )}
-               {latestNews.length > 0 && (
+               {latestNews && latestNews.length > 0 && (
                 <div className="text-center mt-8">
                     <Button asChild>
                         <Link href="/xeberler">Bütün Xəbərlər <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -248,7 +256,7 @@ export default async function HomePage() {
               <div className="lg:col-span-2">
                   <h2 className="text-3xl md:text-4xl font-bold mb-8">Ən Güclü Tələbə Layihələri</h2>
                       <div className="space-y-6">
-                          {strongestProjects.length > 0 ? strongestProjects.map(project => (
+                          {enrichedProjects.length > 0 ? enrichedProjects.map(project => (
                               <Link key={project.id} href={`/profile/${project.student?.id}`} className="block">
                                   <Card className="hover:shadow-md hover:border-primary/50 transition-all">
                                       <CardHeader>
@@ -288,10 +296,10 @@ export default async function HomePage() {
           <section className="py-12">
              <div className="grid gap-8 lg:grid-cols-5">
                 <div className="lg:col-span-2">
-                    <CategoryPieChart students={students} categoriesData={categories} />
+                    {students && categories ? <CategoryPieChart students={students} categoriesData={categories} /> : <p>Kateqoriya məlumatları yüklənir...</p>}
                 </div>
                 <div className="lg:col-span-3">
-                    <FacultyBarChart students={students} />
+                    {students ? <FacultyBarChart students={students} /> : <p>Fakültə məlumatları yüklənir...</p>}
                 </div>
             </div>
           </section>
