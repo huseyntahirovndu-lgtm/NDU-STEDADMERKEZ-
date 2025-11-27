@@ -17,7 +17,7 @@ export default function EditOrgUpdatePage() {
   const updateId = typeof id === 'string' ? id : '';
   
   const updateDocRef = useMemoFirebase(() => 
-      organization && firestore ? doc(firestore, `users/${organization.id}/updates`, updateId) : null,
+      organization && firestore ? doc(firestore, `student-organizations/${organization.id}/updates`, updateId) : null,
       [firestore, organization, updateId]
   );
 

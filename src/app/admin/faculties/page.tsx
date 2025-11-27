@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -18,6 +18,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { FacultyData } from '@/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import {
@@ -31,31 +33,77 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { faculties as allFaculties } from '@/lib/placeholder-data';
-import { v4 as uuidv4 } from 'uuid';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
+const initialFaculties = [
+    "İqtisadiyyat və idarəetmə fakültəsi",
+    "Memarlıq və mühəndislik fakültəsi",
+    "Pedaqoji fakültə",
+    "Təbiətşünaslıq və kənd təsərrüfatı fakültəsi",
+    "Beynəlxalq münasibətlər və hüquq fakültəsi",
+    "Tarix-filologiya fakültəsi",
+    "Fizika-riyaziyyat fakültəsi",
+    "Xarici dillər fakültəsi",
+    "Tibb fakültəsi",
+    "İncəsənət fakültəsi"
+];
 
 export default function AdminFacultiesPage() {
   const [newFaculty, setNewFaculty] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const [faculties, setFaculties] = useState<FacultyData[]>(allFaculties);
+  const firestore = useFirestore();
+
+  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'faculties') : null, [firestore]);
+  const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);
+
+  useEffect(() => {
+    if (firestore && !facultiesLoading && faculties && faculties.length === 0) {
+      const seedFaculties = async () => {
+        setIsSaving(true);
+        const batch = writeBatch(firestore);
+        const facultiesCollectionRef = collection(firestore, 'faculties');
+        initialFaculties.forEach(name => {
+          const docRef = doc(facultiesCollectionRef);
+          batch.set(docRef, { id: docRef.id, name });
+        });
+        try {
+            await batch.commit();
+            toast({ title: 'Fakültələr əlavə edildi', description: 'Başlanğıc fakültə siyahısı sistemə yükləndi.' });
+        } catch(e) {
+            toast({variant: 'destructive', title: 'Xəta', description: 'Fakültələr yüklənərkən xəta baş verdi.'})
+        } finally {
+            setIsSaving(false);
+        }
+      };
+      seedFaculties();
+    }
+  }, [firestore, faculties, facultiesLoading, toast]);
+
 
   const handleAddFaculty = async () => {
-    if (!newFaculty.trim()) return;
-    setIsLoading(true);
+    if (!newFaculty.trim() || !firestore) return;
+    setIsSaving(true);
     
-    // This is a mock. In a real app, you'd send this to your backend.
-    const newFacultyData: FacultyData = { id: uuidv4(), name: newFaculty };
-    setFaculties(prev => [...prev, newFacultyData]);
-
-    toast({ title: 'Uğurlu', description: 'Yeni fakültə əlavə edildi.' });
-    setNewFaculty('');
-    setIsLoading(false);
+    const facultiesCollectionRef = collection(firestore, 'faculties');
+    try {
+      const newDocRef = await addDocumentNonBlocking(facultiesCollectionRef, { name: newFaculty });
+      if (newDocRef) {
+        await updateDoc(newDocRef, { id: newDocRef.id });
+      }
+      toast({ title: 'Uğurlu', description: 'Yeni fakültə əlavə edildi.' });
+      setNewFaculty('');
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Xəta', description: 'Fakültə əlavə edilərkən xəta baş verdi.' });
+    }
+    setIsSaving(false);
   };
 
   const handleDeleteFaculty = (facultyId: string) => {
-    // This is a mock. In a real app, you'd send this to your backend.
-    setFaculties(prev => prev.filter(f => f.id !== facultyId));
+    if (!firestore) return;
+    const facultyDocRef = doc(firestore, 'faculties', facultyId);
+    // Use non-blocking delete
+    deleteDocumentNonBlocking(facultyDocRef);
     toast({ title: 'Uğurlu', description: 'Fakültə silindi.' });
   };
 
@@ -81,11 +129,11 @@ export default function AdminFacultiesPage() {
               value={newFaculty}
               onChange={(e) => setNewFaculty(e.target.value)}
               placeholder="Yeni fakültə adı"
-              disabled={isLoading}
+              disabled={isSaving}
             />
-            <Button onClick={handleAddFaculty} disabled={isLoading || !newFaculty.trim()}>
+            <Button onClick={handleAddFaculty} disabled={isSaving || !newFaculty.trim()}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              {isLoading ? 'Əlavə edilir...' : 'Əlavə Et'}
+              {isSaving ? 'Əlavə edilir...' : 'Əlavə Et'}
             </Button>
           </div>
 
@@ -97,7 +145,11 @@ export default function AdminFacultiesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {faculties.length > 0 ? (
+              {facultiesLoading ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="h-24 text-center">Yüklənir...</TableCell>
+                </TableRow>
+              ) : faculties && faculties.length > 0 ? (
                 faculties.map((faculty) => (
                   <TableRow key={faculty.id}>
                     <TableCell className="font-medium">{faculty.name}</TableCell>

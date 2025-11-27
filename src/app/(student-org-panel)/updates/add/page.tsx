@@ -2,17 +2,19 @@
 import { useRouter } from 'next/navigation';
 import OrgUpdateEditForm from '../edit-form';
 import { useStudentOrg } from '../../layout';
+import { useFirestore } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AddOrgUpdatePage() {
   const router = useRouter();
   const { organization, isLoading: orgLoading } = useStudentOrg();
+  const firestore = useFirestore();
 
   const handleSuccess = (id: string) => {
     router.push('/telebe-teskilati-paneli/updates');
   };
 
-  if (orgLoading) {
+  if (orgLoading || !firestore) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-1/4" />
@@ -31,6 +33,7 @@ export default function AddOrgUpdatePage() {
     <OrgUpdateEditForm 
       onSuccess={handleSuccess}
       organization={organization}
+      firestore={firestore}
     />
   );
 }

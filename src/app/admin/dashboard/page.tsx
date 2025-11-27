@@ -24,36 +24,40 @@ import {
 } from "@/components/ui/table"
 import Link from "next/link";
 import { Student, StudentOrganization } from "@/types";
-import { useAuth } from "@/hooks/use-auth";
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
-import { useMemo } from 'react';
-
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const { user: adminUser, loading: adminLoading } = useAuth();
   const firestore = useFirestore();
-
-  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null, [firestore]);
-  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization')) : null, [firestore]);
-
-  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery);
-  const { data: studentOrgs, isLoading: orgsLoading } = useCollectionOptimized<StudentOrganization>(studentOrgsQuery);
-
-  const isLoading = adminLoading || studentsLoading || orgsLoading;
   
-  const recentStudentsQuery = useMemoFirebase(() => 
-    firestore 
-      ? query(collection(firestore, 'users'), where('role', '==', 'student'), orderBy('createdAt', 'desc'), limit(5)) 
-      : null, 
-    [firestore]
+  const studentsQuery = useMemoFirebase(
+    () => (firestore && adminUser?.role === 'admin') ? query(collection(firestore, "users"), where("role", "==", "student")) : null,
+    [firestore, adminUser]
   );
-  const { data: recentStudents, isLoading: recentStudentsLoading } = useCollectionOptimized<Student>(recentStudentsQuery);
   
-  const totalStudents = students?.length || 0;
-  const totalStudentOrgs = studentOrgs?.length || 0;
+  const studentOrgsQuery = useMemoFirebase(
+    () => (firestore && adminUser?.role === 'admin') ? query(collection(firestore, "student-organizations")) : null,
+    [firestore, adminUser]
+  );
+  
+  const recentStudentsQuery = useMemoFirebase(
+    () => (firestore && adminUser?.role === 'admin') ? query(
+      collection(firestore, "users"),
+      where("role", "==", "student"),
+      orderBy("createdAt", "desc"),
+      limit(5)
+    ) : null,
+    [firestore, adminUser]
+  );
 
-  if (isLoading || recentStudentsLoading) {
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: studentOrgs, isLoading: orgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
+  const { data: recentStudents, isLoading: recentStudentsLoading } = useCollection<Student>(recentStudentsQuery);
+
+  const isLoading = studentsLoading || orgsLoading || recentStudentsLoading || adminLoading;
+
+  if (isLoading) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <div className="text-center">
@@ -64,6 +68,8 @@ export default function AdminDashboard() {
     );
   }
   
+  const totalStudents = students?.length ?? 0;
+  const totalStudentOrgs = studentOrgs?.length ?? 0;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -98,9 +104,8 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-        
-        <div className="grid gap-4 md:gap-8">
-          <Card>
+        <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader className="flex flex-row items-center">
               <div className="grid gap-2">
                 <CardTitle>Son Qeydiyyatlar</CardTitle>
@@ -130,12 +135,12 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentStudents && recentStudents.length === 0 ? (
+                  {recentStudents?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center">Heç bir tələbə tapılmadı</TableCell>
                     </TableRow>
                   ) : (
-                    recentStudents && recentStudents.map((student: Student) => (
+                    recentStudents?.map((student: Student) => (
                       <TableRow key={student.id}>
                         <TableCell>
                           <div className="font-medium">{student.firstName} {student.lastName}</div>
@@ -152,7 +157,7 @@ export default function AdminDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {student.createdAt?.toDate ? student.createdAt.toDate().toLocaleDateString() : (student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-')}
+                          {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'}
                         </TableCell>
                       </TableRow>
                     ))

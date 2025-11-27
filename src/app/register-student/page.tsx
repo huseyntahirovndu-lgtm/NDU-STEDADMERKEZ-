@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -36,7 +36,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Student, FacultyData, CategoryData } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-import { faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -69,17 +70,13 @@ export default function RegisterStudentPage() {
   const { register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
-  const [faculties, setFaculties] = useState<FacultyData[]>([]);
-  const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'faculties') : null, [firestore]);
+  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'categories') : null, [firestore]);
 
-  useEffect(() => {
-    setFaculties(allFaculties);
-    setCategories(allCategories);
-    setDataLoading(false);
-  }, []);
-
+  const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -222,7 +219,7 @@ export default function RegisterStudentPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {dataLoading ? <SelectItem value="loading" disabled>Yüklənir...</SelectItem> : faculties?.map(faculty => (
+                        {facultiesLoading ? <SelectItem value="loading" disabled>Yüklənir...</SelectItem> : faculties?.map(faculty => (
                           <SelectItem key={faculty.id} value={faculty.name}>
                             {faculty.name}
                           </SelectItem>
@@ -285,7 +282,7 @@ export default function RegisterStudentPage() {
                    <FormDescription>
                     Aid olduğunuz bir və ya bir neçə kateqoriyanı seçin.
                   </FormDescription>
-                  {dataLoading ? <p>Yüklənir...</p> : (
+                  {categoriesLoading ? <p>Yüklənir...</p> : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 py-2">
                   {categories?.map((item) => (
                     <FormField
@@ -328,7 +325,7 @@ export default function RegisterStudentPage() {
             />
 
 
-            <Button type="submit" className="w-full" disabled={isLoading || dataLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || facultiesLoading || categoriesLoading}>
               {isLoading ? 'Hesab yaradılır...' : 'Hesab yarat'}
             </Button>
           </form>

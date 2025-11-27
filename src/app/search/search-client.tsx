@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-import { Student, CategoryData, FacultyData, AppUser } from '@/types';
+import { Student, CategoryData, FacultyData } from '@/types';
 import { StudentCard } from '@/components/student-card';
 import { Input } from '@/components/ui/input';
 import { Search as SearchIcon } from 'lucide-react';
@@ -15,9 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { faculties as staticFaculties, categories as staticCategories } from '@/lib/placeholder-data';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 
 type QuickFilter = 'none' | 'high-potential' | 'startup' | 'newcomer';
@@ -33,24 +32,16 @@ export default function SearchClient() {
   const [sortBy, setSortBy] = useState('talentScore');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('none');
   
-  const [faculties] = useState<FacultyData[]>(staticFaculties);
-  const [categories] = useState<CategoryData[]>(staticCategories);
+  const studentsQuery = useMemoFirebase(() => query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")), [firestore]);
+  const facultiesQuery = useMemoFirebase(() => collection(firestore, "faculties"), [firestore]);
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, "categories"), [firestore]);
 
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    let q = query(collection(firestore, 'users'), where('role', '==', 'student'), where('status', '==', 'təsdiqlənmiş'));
-
-    if (sortBy === 'createdAt') {
-        q = query(q, orderBy('createdAt', 'desc'));
-    } else {
-        q = query(q, orderBy('talentScore', 'desc'));
-    }
-    return q;
-  }, [firestore, sortBy]);
-
-
-  const { data: allStudents, isLoading } = useCollectionOptimized<Student>(studentsQuery);
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
   
+  const isLoading = studentsLoading || facultiesLoading || categoriesLoading;
+
   useEffect(() => {
     const sortParam = searchParams.get('sort');
     if (sortParam === 'newest') {
@@ -60,8 +51,8 @@ export default function SearchClient() {
 
 
   const filteredStudents = useMemo(() => {
-    if (!allStudents) return [];
-    let filtered = [...allStudents];
+    if (!students) return [];
+    let filtered = [...students];
 
     if (quickFilter === 'high-potential') {
         filtered = filtered.filter(s => (s.talentScore || 0) >= 90);
@@ -73,6 +64,8 @@ export default function SearchClient() {
 
 
     filtered = filtered.filter(student => {
+      if (student.role !== 'student') return false;
+
       const searchTermMatch =
         `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.major.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,8 +78,15 @@ export default function SearchClient() {
       return searchTermMatch && facultyMatch && courseMatch && categoryMatch;
     });
 
+    if (sortBy === 'createdAt') {
+      filtered.sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0));
+    } else { 
+      filtered.sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
+    }
+
+
     return filtered;
-  }, [allStudents, searchTerm, facultyFilter, courseFilter, categoryFilter, quickFilter]);
+  }, [students, searchTerm, facultyFilter, courseFilter, categoryFilter, sortBy, quickFilter]);
 
   const handleQuickFilterClick = (filter: QuickFilter) => {
     setQuickFilter(current => current === filter ? 'none' : filter);
@@ -112,15 +112,17 @@ export default function SearchClient() {
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <Select value={facultyFilter} onValueChange={setFacultyFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Fakültə seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Bütün Fakültələr</SelectItem>
-                {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {isLoading ? <Skeleton className="h-10 w-full" /> : (
+              <Select value={facultyFilter} onValueChange={setFacultyFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Fakültə seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Bütün Fakültələr</SelectItem>
+                  {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={courseFilter} onValueChange={setCourseFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Kurs seçin" />
@@ -135,15 +137,17 @@ export default function SearchClient() {
                 <SelectItem value="6">6-cı kurs</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kateqoriya seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
-                {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {isLoading ? <Skeleton className="h-10 w-full" /> : (
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kateqoriya seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
+                  {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
              <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger>
                 <SelectValue placeholder="Sıralama" />

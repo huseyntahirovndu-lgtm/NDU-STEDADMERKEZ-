@@ -1,5 +1,5 @@
 'use client';
-import { useFirestore, useCollectionOptimized, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Student } from '@/types';
 import { useState } from 'react';
 import { collection, doc, query, where, documentId } from 'firebase/firestore';
@@ -27,19 +27,19 @@ import { useStudentOrg } from '@/app/(student-org-panel)/layout';
 export default function OrganizationMembersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { organization, setOrganization, isLoading: orgLoading } = useStudentOrg();
+  const { organization, isLoading: orgLoading } = useStudentOrg();
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
 
   const membersQuery = useMemoFirebase(
-    () => (firestore && organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
+    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
     [firestore, organization]
   );
-  const { data: members, isLoading: membersLoading } = useCollectionOptimized<Student>(membersQuery);
+  const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
 
-  const allStudentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null, [firestore]);
-  const { data: allStudents } = useCollectionOptimized<Student>(allStudentsQuery);
+  const allStudentsQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'student')), [firestore]);
+  const { data: allStudents } = useCollection<Student>(allStudentsQuery);
 
   const studentOptions =
     allStudents?.filter(s => !organization?.memberIds?.includes(s.id)).map(s => ({
@@ -50,14 +50,10 @@ export default function OrganizationMembersPage() {
   const handleAddMember = async () => {
     if (!organization || !selectedStudentId) return;
     setIsAddingMember(true);
-    const orgDocRef = doc(firestore, 'users', organization.id);
+    const orgDocRef = doc(firestore, 'student-organizations', organization.id);
     const newMemberIds = [...(organization.memberIds || []), selectedStudentId];
 
     await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });
-    
-    // Optimistically update local state
-    setOrganization(prev => prev ? { ...prev, memberIds: newMemberIds } : null);
-
     toast({ title: 'Uğurlu', description: 'Təşkilata yeni üzv əlavə edildi.' });
     setSelectedStudentId('');
     setIsAddingMember(false);
@@ -65,14 +61,10 @@ export default function OrganizationMembersPage() {
   
   const handleRemoveMember = async (memberId: string) => {
     if(!organization) return;
-    const orgDocRef = doc(firestore, 'users', organization.id);
+    const orgDocRef = doc(firestore, 'student-organizations', organization.id);
     const newMemberIds = organization.memberIds.filter(id => id !== memberId);
     
     await updateDocumentNonBlocking(orgDocRef, { memberIds: newMemberIds });
-
-    // Optimistically update local state
-    setOrganization(prev => prev ? { ...prev, memberIds: newMemberIds } : null);
-
     toast({ title: 'Uğurlu', description: 'Üzv təşkilatdan çıxarıldı.' });
   }
 

@@ -14,8 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
 
 interface StudentCardProps {
   student: Student;
@@ -38,7 +36,6 @@ const categoryColors: { [key: string]: string } = {
 export function StudentCard({ student, className }: StudentCardProps) {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const organization = user?.role === 'organization' ? user as Organization : null;
   const isSaved = organization?.savedStudentIds?.includes(student.id);
@@ -59,23 +56,28 @@ export function StudentCard({ student, className }: StudentCardProps) {
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent link navigation
-    if (!organization || !firestore) return;
+    if (!organization) return;
 
-    const orgDocRef = doc(firestore, 'users', organization.id);
     const currentSavedIds = organization.savedStudentIds || [];
     const newSavedStudentIds = isSaved
       ? currentSavedIds.filter(id => id !== student.id)
       : [...currentSavedIds, student.id];
 
-    updateDocumentNonBlocking(orgDocRef, { savedStudentIds: newSavedStudentIds });
-    
-    // Also update local user state for immediate UI feedback
-    updateUser({ ...organization, savedStudentIds: newSavedStudentIds });
+    const updatedOrg = { ...organization, savedStudentIds: newSavedStudentIds };
+    const success = updateUser(updatedOrg);
 
-    toast({
-      title: isSaved ? "Siyahıdan çıxarıldı" : "Yadda saxlanıldı",
-      description: `${student.firstName} ${student.lastName} ${isSaved ? 'yaddaş siyahısından çıxarıldı.' : 'yaddaş siyahısına əlavə edildi.'}`,
-    });
+    if (success) {
+        toast({
+          title: isSaved ? "Siyahıdan çıxarıldı" : "Yadda saxlanıldı",
+          description: `${student.firstName} ${student.lastName} ${isSaved ? 'yaddaş siyahısından çıxarıldı.' : 'yaddaş siyahısına əlavə edildi.'}`,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Xəta',
+            description: 'Əməliyyat zamanı xəta baş verdi.'
+        })
+    }
   };
 
 

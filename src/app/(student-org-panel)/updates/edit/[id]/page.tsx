@@ -1,29 +1,27 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
+import { useDoc, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { StudentOrgUpdate } from '@/types';
 import OrgUpdateEditForm from '../../edit-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStudentOrg } from '@/app/(student-org-panel)/layout';
-import { useEffect, useState } from 'react';
-import { studentOrgUpdates } from '@/lib/placeholder-data';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export default function EditOrgUpdatePage() {
   const { id } = useParams();
   const router = useRouter();
+  const firestore = useFirestore();
   const { organization, isLoading: orgLoading } = useStudentOrg();
   
   const updateId = typeof id === 'string' ? id : '';
   
-  const [updateData, setUpdateData] = useState<StudentOrgUpdate | null | undefined>(undefined);
-  const [updateLoading, setUpdateLoading] = useState(true);
+  const updateDocRef = useMemoFirebase(() => 
+      organization && firestore ? doc(firestore, `users/${organization.id}/updates`, updateId) : null,
+      [firestore, organization, updateId]
+  );
 
-  useEffect(() => {
-    if (organization?.id && updateId) {
-        const foundUpdate = studentOrgUpdates.find(upd => upd.id === updateId && upd.organizationId === organization.id);
-        setUpdateData(foundUpdate);
-    }
-    setUpdateLoading(false);
-  }, [organization, updateId])
+  const { data: updateData, isLoading: updateLoading } = useDoc<StudentOrgUpdate>(updateDocRef);
   
   const isLoading = orgLoading || updateLoading;
 
@@ -31,7 +29,7 @@ export default function EditOrgUpdatePage() {
     router.push('/telebe-teskilati-paneli/updates');
   };
   
-  if(isLoading || !organization) {
+  if(isLoading || !organization || !firestore) {
     return (
         <div className="space-y-4">
             <Skeleton className="h-8 w-1/4" />
@@ -51,6 +49,7 @@ export default function EditOrgUpdatePage() {
       onSuccess={handleSuccess}
       initialData={updateData}
       organization={organization}
+      firestore={firestore}
     />
   );
 }

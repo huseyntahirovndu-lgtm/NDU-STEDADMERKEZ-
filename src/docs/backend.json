@@ -369,7 +369,7 @@
           "schema": {
             "$ref": "#/backend/entities/Student"
           },
-          "description": "Stores user profile information. The `role` field determines if it's a student, admin, or student organization. This collection holds all users.",
+          "description": "Stores user profile information. The `role` field determines if it's a student or another user type. This collection holds all users.",
           "params": [
             {
               "name": "userId",
@@ -438,18 +438,6 @@
           ]
         }
       },
-        {
-        "path": "/users/{userId}/updates/{updateId}",
-        "definition": {
-          "entityName": "StudentOrgUpdate",
-          "schema": { "$ref": "#/backend/entities/StudentOrgUpdate" },
-          "description": "Stores updates for a specific student organization, within their user document.",
-          "params": [
-            { "name": "userId", "description": "The ID of the student organization." },
-            { "name": "updateId", "description": "The unique ID for the update." }
-          ]
-        }
-      },
       {
         "path": "/skills/{skillId}",
         "definition": {
@@ -495,6 +483,34 @@
               "name": "facultyId",
               "description": "The unique identifier for the faculty."
             }
+          ]
+        }
+      },
+      {
+        "path": "/student-organizations/{orgId}",
+        "definition": {
+          "entityName": "StudentOrganization",
+          "schema": {
+            "$ref": "#/backend/entities/StudentOrganization"
+          },
+          "description": "Stores information about student-led organizations. These are also users.",
+          "params": [
+            {
+              "name": "orgId",
+              "description": "The unique identifier for the student organization."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/student-organizations/{orgId}/updates/{updateId}",
+        "definition": {
+          "entityName": "StudentOrgUpdate",
+          "schema": { "$ref": "#/backend/entities/StudentOrgUpdate" },
+          "description": "Stores updates for a specific student organization.",
+          "params": [
+            { "name": "orgId", "description": "The ID of the student organization." },
+            { "name": "updateId", "description": "The unique ID for the update." }
           ]
         }
       },

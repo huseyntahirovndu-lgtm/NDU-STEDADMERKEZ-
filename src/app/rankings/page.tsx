@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Student, CategoryData, FacultyData } from '@/types';
 import {
@@ -15,26 +15,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { faculties as staticFaculties, categories as staticCategories } from '@/lib/placeholder-data';
 
 
 export default function RankingsPage() {
-  const [facultyFilter, setFacultyFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
   const firestore = useFirestore();
 
+  const [facultyFilter, setFacultyFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
   const studentsQuery = useMemoFirebase(() => 
-    firestore 
-      ? query(collection(firestore, 'users'), where('role', '==', 'student'), where('status', '==', 'təsdiqlənmiş')) 
-      : null,
+    firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, 
     [firestore]
   );
-  const { data: students, isLoading } = useCollectionOptimized<Student>(studentsQuery);
-  const [faculties] = useState<FacultyData[]>(staticFaculties);
-  const [categories] = useState<CategoryData[]>(staticCategories);
+  const facultiesQuery = useMemoFirebase(() => 
+    firestore ? collection(firestore, "faculties") : null, 
+    [firestore]
+  );
+  const categoriesQuery = useMemoFirebase(() => 
+    firestore ? collection(firestore, "categories") : null, 
+    [firestore]
+  );
 
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
+
+  const isLoading = studentsLoading || facultiesLoading || categoriesLoading;
 
   const rankedStudents = useMemo(() => {
     if (!students) return [];
@@ -69,24 +77,28 @@ export default function RankingsPage() {
             </div>
 
             <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
-                <Select value={facultyFilter} onValueChange={setFacultyFilter}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Fakültə seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Bütün Fakültələr</SelectItem>
-                    {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
-                </SelectContent>
-                </Select>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Kateqoriya seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
-                    {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                </SelectContent>
-                </Select>
+                {isLoading ? <Skeleton className="h-10 w-full" /> : (
+                    <Select value={facultyFilter} onValueChange={setFacultyFilter}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Fakültə seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Bütün Fakültələr</SelectItem>
+                        {faculties?.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                )}
+                {isLoading ? <Skeleton className="h-10 w-full" /> : (
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Kateqoriya seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Bütün Kateqoriyalar</SelectItem>
+                        {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                )}
             </div>
 
             {isLoading ? (

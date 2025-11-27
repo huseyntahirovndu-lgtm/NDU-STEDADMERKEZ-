@@ -2,12 +2,10 @@
 
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import type { AppUser, Student, StudentOrganization, Admin } from '@/types';
-import { adminUser as adminUserObject } from '@/lib/placeholder-data';
 import { v4 as uuidv4 } from 'uuid';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-
 
 interface AuthContextType {
   user: AppUser | null;
@@ -26,44 +24,50 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const FAKE_AUTH_DELAY = 10; 
 
-// This is highly insecure and for mock purposes only.
-// In a real app, you would never store passwords like this.
-const passwordMap = new Map<string, string>();
-passwordMap.set(adminUserObject.email, 'huseynimanov2009@thikndu');
-
+const adminUserObject: Admin = {
+    id: 'admin_user',
+    role: 'admin',
+    email: 'huseynimanov@ndu.edu.az',
+    firstName: 'Hüseyn',
+    lastName: 'Tahirov',
+};
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const firestore = useFirestore();
+  const router = useRouter();
 
   useEffect(() => {
     const checkUserSession = async () => {
       setLoading(true);
       const userId = localStorage.getItem('userId');
-      const userPass = userId ? localStorage.getItem(`pass_${userId}`) : null;
       
-      if (userId) {
-        if (userId === adminUserObject.id && userPass === 'huseynimanov2009@thikndu') {
-          setUser(adminUserObject);
-        } else if (firestore) {
-            try {
-              const userDocRef = doc(firestore, 'users', userId);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                  setUser({ id: userDoc.id, ...userDoc.data() } as AppUser);
-              } else {
-                 localStorage.removeItem('userId');
-                 localStorage.removeItem(`pass_${userId}`);
-                 setUser(null);
-              }
-            } catch (e) {
-                console.error("Error fetching user from Firestore:", e);
+      if (userId === adminUserObject.id) {
+        setUser(adminUserObject);
+      } else if (userId && firestore) {
+        try {
+          // Check students/admins in 'users' collection
+          let userDocRef = doc(firestore, 'users', userId);
+          let userSnap = await getDoc(userDocRef);
+
+          if (userSnap.exists()) {
+            setUser(userSnap.data() as AppUser);
+          } else {
+            // Check student organizations in 'student-organizations' collection
+            userDocRef = doc(firestore, 'student-organizations', userId);
+            userSnap = await getDoc(userDocRef);
+             if (userSnap.exists()) {
+                setUser(userSnap.data() as AppUser);
+             } else {
                 localStorage.removeItem('userId');
-                localStorage.removeItem(`pass_${userId}`);
                 setUser(null);
-            }
+             }
+          }
+        } catch (e) {
+          console.error("Failed to restore session from Firestore", e);
+          localStorage.removeItem('userId');
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -71,7 +75,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     };
     
-    checkUserSession();
+    if(firestore) {
+      checkUserSession();
+    }
   }, [firestore]);
 
 
@@ -82,27 +88,64 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     if (email === adminUserObject.email && pass === 'huseynimanov2009@thikndu') {
         setUser(adminUserObject);
         localStorage.setItem('userId', adminUserObject.id);
-        localStorage.setItem(`pass_${adminUserObject.id}`, pass); // Store pass for session restore
-        router.push('/admin/dashboard');
         setLoading(false);
+        router.push('/admin/dashboard');
         return true;
     }
 
-    // In a real app, this logic would be handled by Firebase Auth signInWithEmailAndPassword.
-    // This is NOT secure and for demonstration only.
-    // For now, we just simulate it by checking if a user with that email exists.
-    // This part is tricky without a proper auth backend, so we will remove the placeholder logic
-    // and rely on a more dynamic (but still mock) approach.
+    if (!firestore) return false;
+
+    try {
+      // Search in 'users' collection (for students)
+      const usersRef = collection(firestore, "users");
+      const qUsers = query(usersRef, where("email", "==", email));
+      const userSnapshot = await getDocs(qUsers);
+
+      if (!userSnapshot.empty) {
+        const userDoc = userSnapshot.docs[0];
+        const userData = userDoc.data() as AppUser;
+        
+        setUser(userData);
+        localStorage.setItem('userId', userData.id);
+        
+        if (userData.role === 'student') router.push('/student-dashboard');
+        else router.push('/');
+
+        setLoading(false);
+        return true;
+      }
+      
+      // Search in 'student-organizations' collection
+      const orgsRef = collection(firestore, "student-organizations");
+      const qOrgs = query(orgsRef, where("email", "==", email));
+      const orgSnapshot = await getDocs(qOrgs);
+
+      if (!orgSnapshot.empty) {
+        const orgDoc = orgSnapshot.docs[0];
+        const orgData = orgDoc.data() as AppUser;
+
+        setUser(orgData);
+        localStorage.setItem('userId', orgData.id);
+
+        if (orgData.role === 'student-organization') router.push('/telebe-teskilati-paneli/dashboard');
+        else router.push('/');
+
+        setLoading(false);
+        return true;
+      }
+      
+      setLoading(false);
+      return false;
+
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
     
     setLoading(false);
-    return false; // Placeholder for non-admin login. Actual logic will be added back.
+    return false;
   };
 
   const logout = () => {
-    const userId = localStorage.getItem('userId');
-    if (userId) {
-      localStorage.removeItem(`pass_${userId}`);
-    }
     setUser(null);
     localStorage.removeItem('userId');
     router.push('/login');
@@ -113,57 +156,64 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     pass: string,
     skipRedirect = false
   ): Promise<boolean> => {
-    setLoading(true);
+     setLoading(true);
+     await new Promise(res => setTimeout(res, FAKE_AUTH_DELAY));
 
     if (!firestore) {
-      console.error("Firestore service not available.");
+      console.error("Firestore is not initialized");
       setLoading(false);
       return false;
     }
-    
-    const newUserId = uuidv4();
-    const userWithId = {
-        ...newUser,
-        id: newUserId,
-        createdAt: Timestamp.now(), // Use Firestore Timestamp for server consistency
-        status: newUser.role === 'student' ? 'gözləyir' : newUser.status,
-    };
 
     try {
-      const userDocRef = doc(firestore, 'users', newUserId);
-      await setDoc(userDocRef, userWithId);
+      const collectionName = newUser.role === 'student' ? 'users' : 'student-organizations';
+      const collectionRef = collection(firestore, collectionName);
+
+      const q = query(collectionRef, where("email", "==", newUser.email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        console.log(`User with this email already exists in ${collectionName}.`);
+        setLoading(false);
+        return false;
+      }
+
+      const newUserId = uuidv4();
+      const userDocRef = doc(firestore, collectionName, newUserId);
       
-      // In a real app, you would use Firebase Auth `createUserWithEmailAndPassword`.
-      // For this mock, we are just storing the user profile and a fake password reference.
-      passwordMap.set(newUser.email, pass);
+      const userWithId = {
+          ...newUser,
+          id: newUserId,
+          createdAt: new Date().toISOString(),
+          status: newUser.role === 'student' ? 'gözləyir' : newUser.status,
+      };
 
-      console.log("New user registered in Firestore:", userWithId);
-
+      await setDoc(userDocRef, userWithId);
       setLoading(false);
+
       if (!skipRedirect) {
           router.push('/login');
       }
       return true;
-
     } catch (error) {
-        console.error("Error during user registration in Firestore:", error);
-        setLoading(false);
-        return false;
+      console.error('Registration failed:', error);
+      setLoading(false);
+      return false;
     }
   };
 
   const updateUser = (updatedData: Partial<AppUser>): boolean => {
     if (!user) return false;
-    
     const newUserData = { ...user, ...updatedData };
     setUser(newUserData);
     
-    if (firestore) {
-        const userDocRef = doc(firestore, 'users', user.id);
-        updateDocumentNonBlocking(userDocRef, updatedData);
+    if (firestore && user.id !== 'admin_user') {
+        const collectionName = user.role === 'student' ? 'users' : 'student-organizations';
+        const userDocRef = doc(firestore, collectionName, newUserData.id);
+        setDoc(userDocRef, updatedData, { merge: true }).catch(err => {
+            console.error("Failed to update user in Firestore:", err);
+        });
     }
-    
-    console.log("User data updated locally and in Firestore:", newUserData);
     return true;
   };
 

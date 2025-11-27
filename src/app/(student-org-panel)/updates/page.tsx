@@ -40,31 +40,40 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { StudentOrgUpdate } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, doc, writeBatch } from "firebase/firestore";
 import { format } from 'date-fns';
 import { useStudentOrg } from "@/app/(student-org-panel)/layout";
-import { useState, useEffect } from "react";
-import { studentOrgUpdates } from "@/lib/placeholder-data";
 
 export default function OrgUpdatesPage() {
     const { toast } = useToast();
+    const firestore = useFirestore();
     const { organization } = useStudentOrg();
-    
-    const [updates, setUpdates] = useState<StudentOrgUpdate[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-      if (organization) {
-        const orgUpdates = studentOrgUpdates.filter(u => u.organizationId === organization.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setUpdates(orgUpdates);
-      }
-      setIsLoading(false);
-    }, [organization]);
+    const updatesQuery = useMemoFirebase(() => 
+        organization ? query(collection(firestore, `users/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
+        [firestore, organization]
+    );
+    const { data: updates, isLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
 
     const handleDelete = async (updateId: string) => {
-        if (!organization) return;
-        // This is a mock implementation.
-        setUpdates(prev => prev.filter(u => u.id !== updateId));
-        toast({ title: "Yenilik uğurla silindi. (mock)" });
+        if (!organization || !firestore) return;
+
+        const batch = writeBatch(firestore);
+
+        const subCollectionDocRef = doc(firestore, `users/${organization.id}/updates`, updateId);
+        const topLevelDocRef = doc(firestore, 'student-org-updates', updateId);
+
+        batch.delete(subCollectionDocRef);
+        batch.delete(topLevelDocRef);
+
+        try {
+            await batch.commit();
+            toast({ title: "Yenilik uğurla silindi." });
+        } catch (error) {
+            console.error("Yenilik silinərkən xəta:", error);
+            toast({ variant: 'destructive', title: "Xəta", description: "Yenilik silinərkən xəta baş verdi." });
+        }
     };
 
     return (
@@ -104,7 +113,7 @@ export default function OrgUpdatesPage() {
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.title}</TableCell>
                             <TableCell className="hidden md:table-cell">
-                               {item.createdAt ? format(new Date(item.createdAt), 'dd.MM.yyyy') : '-'}
+                               {item.createdAt?.toDate ? format(item.createdAt.toDate(), 'dd.MM.yyyy') : '-'}
                             </TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>

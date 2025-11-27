@@ -1,12 +1,14 @@
 'use client';
-import { Student } from '@/types';
-import { useMemo, useState, useEffect } from 'react';
+import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { Student, StudentOrganization } from '@/types';
+import { useMemo } from 'react';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { useAuth } from '@/hooks/use-auth';
 import { useStudentOrg } from '../layout';
-import { students as allStudents } from '@/lib/placeholder-data';
 
 const chartConfig = {
   members: {
@@ -16,18 +18,15 @@ const chartConfig = {
 };
 
 export default function OrganizationDashboardPage() {
+  const firestore = useFirestore();
   const { organization, isLoading: orgLoading } = useStudentOrg();
-  const [members, setMembers] = useState<Student[]>([]);
-  const [membersLoading, setMembersLoading] = useState(true);
 
-  useEffect(() => {
-    if (organization?.memberIds && organization.memberIds.length > 0) {
-      const memberDetails = allStudents.filter(s => organization.memberIds.includes(s.id));
-      setMembers(memberDetails);
-    }
-    setMembersLoading(false);
-  }, [organization]);
 
+  const membersQuery = useMemoFirebase(
+    () => (organization?.memberIds && organization.memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds)) : null),
+    [firestore, organization]
+  );
+  const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
 
   const memberJoinData = useMemo(() => {
     if (!members) return [];
@@ -43,12 +42,28 @@ export default function OrganizationDashboardPage() {
         if (!member || !member.createdAt) {
             return; 
         }
-        const memberDate = new Date(member.createdAt);
-        if (isNaN(memberDate.getTime())) {
+
+        let memberDate: Date | null = null;
+        try {
+            // Firestore timestamp object
+            if (member.createdAt && typeof member.createdAt.toDate === 'function') {
+                memberDate = member.createdAt.toDate();
+            // ISO string or timestamp number
+            } else if (typeof member.createdAt === 'string' || typeof member.createdAt === 'number') {
+                memberDate = new Date(member.createdAt);
+                 if (isNaN(memberDate.getTime())) {
+                    memberDate = null;
+                }
+            // Javascript Date object
+            } else if (member.createdAt instanceof Date) {
+                memberDate = member.createdAt;
+            }
+        } catch(e) {
+            console.error("Tarix formatı ilə bağlı problem:", member.id, member.createdAt, e);
             return;
         }
 
-        if (memberDate.getFullYear() === currentYear) {
+        if (memberDate && memberDate.getFullYear() === currentYear) {
             const monthIndex = memberDate.getMonth();
             const monthName = monthOrder[monthIndex];
             if (monthName) {

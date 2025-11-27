@@ -18,6 +18,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import type { CategoryData } from '@/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import {
@@ -31,29 +33,35 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { categories as allCategories } from '@/lib/placeholder-data';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function AdminCategoriesPage() {
   const [newCategory, setNewCategory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [categories, setCategories] = useState<CategoryData[]>(allCategories);
+  const firestore = useFirestore();
+
+  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'categories') : null, [firestore]);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
 
   const handleAddCategory = async () => {
-    if (!newCategory.trim()) return;
+    if (!newCategory.trim() || !firestore) return;
     setIsLoading(true);
-
-    const newCategoryData: CategoryData = { id: uuidv4(), name: newCategory };
-    setCategories(prev => [...prev, newCategoryData]);
     
-    toast({ title: 'Uğurlu', description: 'Yeni kateqoriya əlavə edildi.' });
-    setNewCategory('');
+    const categoriesCollectionRef = collection(firestore, 'categories');
+    try {
+      await addDocumentNonBlocking(categoriesCollectionRef, { name: newCategory });
+      toast({ title: 'Uğurlu', description: 'Yeni kateqoriya əlavə edildi.' });
+      setNewCategory('');
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Xəta', description: 'Kateqoriya əlavə edilərkən xəta baş verdi.' });
+    }
     setIsLoading(false);
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    if (!firestore) return;
+    const categoryDocRef = doc(firestore, 'categories', categoryId);
+    deleteDocumentNonBlocking(categoryDocRef);
     toast({ title: 'Uğurlu', description: 'Kateqoriya silindi.' });
   };
 
@@ -95,7 +103,11 @@ export default function AdminCategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.length > 0 ? (
+              {categoriesLoading ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="h-24 text-center">Yüklənir...</TableCell>
+                </TableRow>
+              ) : categories && categories.length > 0 ? (
                 categories.map((category) => (
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>

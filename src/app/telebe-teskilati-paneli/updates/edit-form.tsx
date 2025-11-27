@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Firestore, collection, doc, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { Firestore, collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type { StudentOrgUpdate, StudentOrganization } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +49,7 @@ export default function OrgUpdateEditForm({ initialData, onSuccess, organization
     },
   });
   
-   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -77,37 +76,54 @@ export default function OrgUpdateEditForm({ initialData, onSuccess, organization
 
   const onSubmit: SubmitHandler<FormData> = async (values) => {
     setIsSaving(true);
-    
-    try {
-        if (isEditMode && initialData) {
-            const updateData = {
-                ...values,
-                updatedAt: serverTimestamp(),
-            };
-            const docRef = doc(firestore, `users/${organization.id}/updates`, initialData.id);
-            await updateDocumentNonBlocking(docRef, updateData);
-            toast({ title: 'Uğurlu', description: 'Yenilik uğurla yeniləndi.' });
-            onSuccess(initialData.id);
 
-        } else {
-            const newId = uuidv4();
-            const newUpdate = {
-                ...values,
-                id: newId,
-                organizationId: organization.id,
-                createdAt: serverTimestamp(),
-            }
-            const collectionRef = collection(firestore, `users/${organization.id}/updates`);
-            await addDocumentNonBlocking(collectionRef, newUpdate);
-            toast({ title: 'Uğurlu', description: 'Yenilik uğurla yaradıldı.' });
-            onSuccess(newId);
-        }
-     } catch (error) {
-        console.error("Error saving update:", error);
-        toast({ variant: 'destructive', title: 'Xəta', description: 'Yenilik yadda saxlanarkən xəta baş verdi.' });
-     } finally {
-        setIsSaving(false);
-     }
+    try {
+      const batch = writeBatch(firestore);
+
+      if (isEditMode && initialData) {
+        const updateData = {
+          ...values,
+          updatedAt: serverTimestamp(),
+        };
+        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, initialData.id);
+        const topLevelDocRef = doc(firestore, 'student-org-updates', initialData.id);
+        
+        batch.update(subCollectionDocRef, updateData);
+        batch.update(topLevelDocRef, updateData);
+
+        await batch.commit();
+        toast({ title: 'Uğurlu', description: 'Yenilik uğurla yeniləndi.' });
+        onSuccess(initialData.id);
+
+      } else {
+        const newUpdateId = uuidv4();
+        const newUpdateData = {
+          ...values,
+          id: newUpdateId,
+          organizationId: organization.id,
+          createdAt: serverTimestamp(),
+        };
+        
+        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, newUpdateId);
+        const topLevelDocRef = doc(firestore, 'student-org-updates', newUpdateId);
+
+        batch.set(subCollectionDocRef, newUpdateData);
+        batch.set(topLevelDocRef, newUpdateData);
+
+        await batch.commit();
+        toast({ title: 'Uğurlu', description: 'Yenilik uğurla yaradıldı.' });
+        onSuccess(newUpdateId);
+      }
+    } catch (error: any) {
+      console.error("Yenilik yaradılarkən/yenilənərkən xəta:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Xəta',
+        description: error.message || 'Yenilik yaradılarkən/yenilənərkən xəta baş verdi.',
+      });
+    }
+
+    setIsSaving(false);
   };
 
   const isSubmitDisabled = isSaving || isUploading;

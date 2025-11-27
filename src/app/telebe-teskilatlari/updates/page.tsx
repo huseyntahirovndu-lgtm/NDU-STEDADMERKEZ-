@@ -38,32 +38,43 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { StudentOrgUpdate } from "@/types";
+import type { StudentOrganization, StudentOrgUpdate } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useCollectionOptimized, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, orderBy, doc } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, doc, writeBatch } from "firebase/firestore";
 import { format } from 'date-fns';
-import { useStudentOrg } from "@/app/(student-org-panel)/layout";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function OrgUpdatesPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { organization } = useStudentOrg();
+    const { user } = useAuth();
+    const organization = user as StudentOrganization | null;
 
     const updatesQuery = useMemoFirebase(() => 
-        organization && firestore ? query(collection(firestore, `users/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
+        organization ? query(collection(firestore, `student-organizations/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
         [firestore, organization]
     );
-    const { data: updates, isLoading } = useCollectionOptimized<StudentOrgUpdate>(updatesQuery);
+    const { data: updates, isLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
 
     const handleDelete = async (updateId: string) => {
         if (!organization || !firestore) return;
-        
-        const docRef = doc(firestore, `users/${organization.id}/updates`, updateId);
-        
-        await deleteDocumentNonBlocking(docRef);
 
-        toast({ title: "Yenilik uğurla silindi." });
+        const batch = writeBatch(firestore);
+
+        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, updateId);
+        const topLevelDocRef = doc(firestore, 'student-org-updates', updateId);
+
+        batch.delete(subCollectionDocRef);
+        batch.delete(topLevelDocRef);
+
+        try {
+            await batch.commit();
+            toast({ title: "Yenilik uğurla silindi." });
+        } catch (error) {
+            console.error("Yenilik silinərkən xəta:", error);
+            toast({ variant: 'destructive', title: "Xəta", description: "Yenilik silinərkən xəta baş verdi." });
+        }
     };
 
     return (
@@ -116,7 +127,7 @@ export default function OrgUpdatesPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/telebe-teskilatlari/updates/edit/${item.id}`}>Redaktə Et</Link>
+                                            <Link href={`/telebe-teskilati-paneli/updates/edit/${item.id}`}>Redaktə Et</Link>
                                         </DropdownMenuItem>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>

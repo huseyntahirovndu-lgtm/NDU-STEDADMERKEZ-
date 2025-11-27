@@ -1,6 +1,8 @@
 'use client';
 import { useParams } from 'next/navigation';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { StudentOrganization, StudentOrgUpdate } from '@/types';
+import { doc, collection, query, orderBy, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +11,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import MembersList from './members-list';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
+import { useAuth } from '@/hooks/use-auth';
 
 
 function OrgDetailsLoading() {
@@ -33,16 +34,20 @@ function OrgDetailsLoading() {
 export default function StudentOrgDetailsPage() {
   const { id } = useParams();
   const firestore = useFirestore();
-  const orgId = typeof id === 'string' ? id : '';
-  
-  const orgDocRef = useMemoFirebase(() => firestore && orgId ? doc(firestore, 'users', orgId) : null, [firestore, orgId]);
-  const updatesQuery = useMemoFirebase(() => firestore && orgId ? query(collection(firestore, `users/${orgId}/updates`), orderBy('createdAt', 'desc')) : null, [firestore, orgId]);
-  
-  const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
-  const { data: updates, isLoading: updatesLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
-  
-  const isLoading = orgLoading || updatesLoading;
+  const { user: currentUser } = useAuth();
 
+  const orgId = typeof id === 'string' ? id : '';
+
+  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'student-organizations', orgId) : null), [firestore, orgId]);
+  const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
+  
+  const updatesQuery = useMemoFirebase(
+    () => (firestore && orgId ? query(collection(firestore, 'student-org-updates'), where('organizationId', '==', orgId), orderBy('createdAt', 'desc')) : null),
+    [firestore, orgId]
+);
+  const { data: updates, isLoading: updatesLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
+
+  const isLoading = orgLoading || updatesLoading;
 
   if (isLoading) {
     return <OrgDetailsLoading />;
@@ -96,7 +101,7 @@ export default function StudentOrgDetailsPage() {
                                     <div className="p-4">
                                         <h3 className="font-bold text-lg group-hover:text-primary mb-1">{update.title}</h3>
                                         <p className="text-xs text-muted-foreground mb-2">
-                                            {update.createdAt?.toDate ? format(update.createdAt.toDate(), 'dd MMMM, yyyy') : ''}
+                                            {update.createdAt ? format(update.createdAt.toDate(), 'dd MMMM, yyyy') : ''}
                                         </p>
                                         <p className="text-sm text-muted-foreground line-clamp-2">
                                              {update.content.replace(/<[^>]*>?/gm, '')}

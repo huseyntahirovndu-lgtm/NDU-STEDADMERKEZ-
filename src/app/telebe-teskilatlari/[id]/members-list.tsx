@@ -1,15 +1,14 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, documentId, query, where } from 'firebase/firestore';
 import { Student, StudentOrganization } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
-
 
 interface MembersListProps {
   organization: StudentOrganization;
@@ -20,14 +19,17 @@ export default function MembersList({ organization }: MembersListProps) {
   const firestore = useFirestore();
 
   const membersQuery = useMemoFirebase(
-    () => (firestore && organization?.memberIds && organization.memberIds.length > 0
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds))
-        : null),
-    [firestore, organization?.memberIds]
+    () =>
+      currentUser && organization?.memberIds && organization.memberIds.length > 0
+        ? query(
+            collection(firestore, 'users'),
+            where(documentId(), 'in', organization.memberIds)
+          )
+        : null,
+    [firestore, organization, currentUser]
   );
-  
-  const { data: members, isLoading } = useCollection<Student>(membersQuery);
 
+  const { data: members, isLoading: membersLoading } = useCollection<Student>(membersQuery);
 
   return (
     <Card>
@@ -42,7 +44,7 @@ export default function MembersList({ organization }: MembersListProps) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {currentUser && isLoading && (
+        {currentUser && membersLoading && (
            <div className="space-y-3">
              <div className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -78,7 +80,7 @@ export default function MembersList({ organization }: MembersListProps) {
               ))}
             </div>
           </div>
-        ) : currentUser && !isLoading ? (
+        ) : currentUser && !membersLoading ? (
           <p className="text-sm text-muted-foreground">
             Bu təşkilatın heç bir üzvü yoxdur.
           </p>

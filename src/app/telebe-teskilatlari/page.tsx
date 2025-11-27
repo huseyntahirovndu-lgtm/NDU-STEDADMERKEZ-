@@ -1,19 +1,21 @@
 'use client';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { StudentOrganization } from '@/types';
+import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Building } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-
 
 export default function StudentOrganizationsPage() {
   const firestore = useFirestore();
-  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization'), where('status', '==', 'təsdiqlənmiş')) : null, [firestore]);
-  const { data: orgs, isLoading } = useCollection<StudentOrganization>(orgsQuery);
 
+  const studentOrgsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'student-organizations'), where('status', '==', 'təsdiqlənmiş')) : null),
+    [firestore]
+  );
+  const { data: studentOrgs, isLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -30,9 +32,9 @@ export default function StudentOrganizationsPage() {
             <Skeleton key={i} className="h-48 w-full rounded-lg" />
           ))}
         </div>
-      ) : orgs && orgs.length > 0 ? (
+      ) : studentOrgs && studentOrgs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {orgs.map((org) => (
+          {studentOrgs.map((org) => (
             <Link key={org.id} href={`/telebe-teskilatlari/${org.id}`} className="group">
               <Card className="h-full overflow-hidden transition-shadow duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center gap-4">

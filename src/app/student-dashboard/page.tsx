@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getProfileRecommendations } from '@/app/actions';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDoc, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
 
 
@@ -95,16 +95,16 @@ export default function StudentDashboard() {
         }
     }, [user, loading, router]);
     
-    const invitationsQuery = useMemoFirebase(() => studentProfile?.id ? query(collection(firestore, `users/${studentProfile.id}/invitations`), where('status', '==', 'gözləyir')) : null, [firestore, studentProfile?.id]);
-    const { data: invitations, isLoading: invitationsLoading } = useCollectionOptimized<Invitation>(invitationsQuery, { enableCache: true, disableRealtimeOnInit: true });
+    const invitationsQuery = useMemoFirebase(() => studentProfile ? query(collection(firestore, `users/${studentProfile.id}/invitations`), where('status', '==', 'gözləyir')) : null, [firestore, studentProfile]);
+    const { data: invitations, isLoading: invitationsLoading } = useCollection<Invitation>(invitationsQuery as any);
     const [enrichedInvitations, setEnrichedInvitations] = useState<EnrichedInvitation[]>([]);
 
     useEffect(() => {
-        if (invitations && firestore) {
+        if (invitations) {
             const enrich = async () => {
                 const enriched = await Promise.all(invitations.map(async (inv) => {
                     const projectDoc = await getDoc(doc(firestore, 'projects', inv.projectId));
-                    const orgDoc = await getDoc(doc(firestore, 'users', inv.organizationId));
+                    const orgDoc = await getDoc(doc(firestore, 'student-organizations', inv.organizationId));
                     return {
                         ...inv,
                         project: projectDoc.exists() ? { id: projectDoc.id, ...projectDoc.data() } as Project : undefined,
@@ -118,7 +118,7 @@ export default function StudentDashboard() {
     }, [invitations, firestore]);
     
     const handleInvitation = async (invitation: EnrichedInvitation, status: 'qəbul edildi' | 'rədd edildi') => {
-        if (!invitation.project || !studentProfile || !firestore) return;
+        if (!invitation.project || !studentProfile) return;
         
         const invitationDocRef = doc(firestore, `users/${studentProfile.id}/invitations`, invitation.id);
         

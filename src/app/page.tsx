@@ -1,4 +1,3 @@
-
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -16,16 +15,14 @@ import { CategoryPieChart } from '@/components/charts/category-pie-chart';
 import { FacultyBarChart } from '@/components/charts/faculty-bar-chart';
 import { Student, Project, CategoryData, Achievement, StudentOrganization, News } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/hooks/use-auth';
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { selectTopStories } from '@/app/actions';
 import { format } from 'date-fns';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-
 
 interface EnrichedProject extends Project {
     student?: Student;
@@ -60,110 +57,126 @@ const SuccessStoryCard = ({ story }: { story: SuccessStory }) => (
 );
 
 export default function HomePage() {
-  const { user } = useAuth();
   const firestore = useFirestore();
+  const { user } = useAuth();
 
-  // Queries for live data
-  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student'), where('status', '==', 'təsdiqlənmiş')) : null, [firestore]);
-  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization'), where('status', '==', 'təsdiqlənmiş')) : null, [firestore]);
-  const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
-  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'projects'), orderBy('title')) : null, [firestore]); // Note: might need better sorting for "strongest"
-  
-  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery);
-  const { data: studentOrgs, isLoading: orgsLoading } = useCollectionOptimized<StudentOrganization>(studentOrgsQuery);
-  const { data: latestNews, isLoading: newsLoading } = useCollectionOptimized<News>(newsQuery);
-  const { data: allProjects, isLoading: projectsLoading } = useCollectionOptimized<Project>(projectsQuery);
+  const studentsQuery = useMemoFirebase(() => query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")), [firestore]);
+  const studentOrgsQuery = useMemoFirebase(() => query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")), [firestore]);
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, "categories"), [firestore]);
+  const newsQuery = useMemoFirebase(() => query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)), [firestore]);
 
-  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: studentOrgs, isLoading: studentOrgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
+  const { data: latestNews, isLoading: newsLoading } = useCollection<News>(newsQuery);
+
+  const [topTalents, setTopTalents] = useState<Student[]>([]);
+  const [newMembers, setNewMembers] = useState<Student[]>([]);
+  const [strongestProjects, setStrongestProjects] = useState<EnrichedProject[]>([]);
+  const [popularSkills, setPopularSkills] = useState<string[]>([]);
   const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
   const [stats, setStats] = useState({ projects: 0, achievements: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+  
+  const isLoading = studentsLoading || studentOrgsLoading || categoriesLoading || statsLoading || newsLoading;
 
-  const isLoading = studentsLoading || orgsLoading || newsLoading || projectsLoading;
+  useEffect(() => {
+    if (firestore && students) {
+        const fetchStats = async () => {
+            setStatsLoading(true);
+            let projectCount = 0;
+            let achievementCount = 0;
+            
+            for (const student of students) {
+                const projectsSnap = await getDocs(collection(firestore, `users/${student.id}/projects`));
+                const achievementsSnap = await getDocs(collection(firestore, `users/${student.id}/achievements`));
+                projectCount += projectsSnap.size;
+                achievementCount += achievementsSnap.size;
+            }
+            setStats({ projects: projectCount, achievements: achievementCount });
+            setStatsLoading(false);
+        };
+        fetchStats();
+    }
+  }, [firestore, students]);
 
-   const topTalents = useMemo(() => {
-    if (!students) return [];
-    return [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0)).slice(0, 10);
-  }, [students]);
+  useEffect(() => {
+    if (!students || students.length === 0) return;
 
-  const newMembers = useMemo(() => {
-    if (!students) return [];
-    return [...students].sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-        return dateB.getTime() - dateA.getTime();
-    }).slice(0, 5);
-  }, [students]);
+    const sortedByTalent = [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
+    setTopTalents(sortedByTalent.slice(0, 10));
 
-  const strongestProjects = useMemo(() => {
-    if (!allProjects || !students) return [];
-     const enriched = allProjects.map(p => {
-        const student = students.find(s => s.id === p.ownerId);
-        return { ...p, student };
-    }).filter(p => p.student);
-    // Simple slice for now, a better metric for "strongest" could be implemented
-    return enriched.slice(0, 3);
-  }, [allProjects, students]);
-
-  const popularSkills = useMemo(() => {
-    if (!students) return [];
+    const sortedByDate = [...students].sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0));
+    setNewMembers(sortedByDate.slice(0, 5));
+    
     const allSkills = students.flatMap(s => s.skills || []).map(s => s.name);
     const skillCounts = allSkills.reduce((acc, skill) => {
         acc[skill] = (acc[skill] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    return Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]).slice(0, 10);
-  }, [students]);
-
-
-  useEffect(() => {
-    const fetchStatsAndStories = async () => {
-        if (!students || !firestore) return;
-
-        // Calculate total achievements
-        let totalAchievements = 0;
-        for (const student of students) {
-          const achievementsCol = collection(firestore, `users/${student.id}/achievements`);
-          const achievementsSnap = await getDocs(achievementsCol);
-          totalAchievements += achievementsSnap.size;
-        }
-        setStats({ projects: allProjects?.length || 0, achievements: totalAchievements });
-        
-        // Select success stories
+    const sortedSkills = Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]);
+    setPopularSkills(sortedSkills.slice(0, 10));
+    
+    const fetchStories = async () => {
         const storiesToConsider = students
             .filter(s => s.successStory && s.successStory.trim().length > 10)
-            .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory! }));
+            .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory!, profilePictureUrl: s.profilePictureUrl }));
         
-        if (storiesToConsider.length === 0) {
-          setSuccessStories([]);
-          return;
-        };
+        if (storiesToConsider.length === 0) return;
+
+        if (storiesToConsider.length <= 2) {
+            setSuccessStories(storiesToConsider.map(s => ({
+                studentId: s.id,
+                name: `${s.firstName} ${s.lastName}`,
+                faculty: s.faculty,
+                story: s.successStory,
+                profilePictureUrl: s.profilePictureUrl
+            })));
+            return;
+        }
 
         try {
             const result = await selectTopStories({ stories: storiesToConsider });
-            const enrichedStories = result.selectedStories.map(s => {
-                const student = students.find(st => st.id === s.studentId);
-                return {...s, profilePictureUrl: student?.profilePictureUrl};
-            })
-            setSuccessStories(enrichedStories);
+            setSuccessStories(result.selectedStories.map(s => ({...s, profilePictureUrl: storiesToConsider.find(stc => stc.id === s.studentId)?.profilePictureUrl})));
         } catch (error) {
             console.error("AI story selection failed, using fallback:", error);
-            const fallbackStories = storiesToConsider.slice(0, 2).map(s => ({
+            setSuccessStories(storiesToConsider.slice(0, 2).map(s => ({
                  studentId: s.id,
                  name: `${s.firstName} ${s.lastName}`,
                  faculty: s.faculty,
                  story: s.successStory,
-                 profilePictureUrl: students.find(st => st.id === s.id)?.profilePictureUrl
-            }));
-            setSuccessStories(fallbackStories);
+                 profilePictureUrl: s.profilePictureUrl
+            })));
         }
     };
+    fetchStories();
+
+  }, [students]);
+
+   useEffect(() => {
+    if (!students || !firestore) return;
     
-    if (students && allProjects) {
-        fetchStatsAndStories();
+    const fetchProjects = async () => {
+        const allStudentProjects: EnrichedProject[] = [];
+        for (const student of students) {
+            if(student.role !== 'student') continue;
+            const projectsCol = collection(firestore, `users/${student.id}/projects`);
+            const projectsSnap = await getDocs(projectsCol);
+            projectsSnap.forEach(doc => {
+                const projectData = doc.data() as Project;
+                if(projectData.ownerType === 'student') {
+                    allStudentProjects.push({ ...projectData, id: doc.id, student });
+                }
+            });
+        }
+        // Here we can add sorting logic if needed, e.g., by date
+        setStrongestProjects(allStudentProjects.slice(0, 3));
     }
-  }, [students, allProjects, firestore]);
-  
+    fetchProjects();
+    
+   }, [students, firestore]);
+
 
   return (
     <div className="flex flex-col">
@@ -175,7 +188,6 @@ export default function HomePage() {
               fill
               className="object-cover"
               priority
-              sizes="(max-width: 768px) 100vw, 100vw"
               data-ai-hint="university campus students"
             />
             <div className="relative z-10 h-full flex items-center">
@@ -256,7 +268,7 @@ export default function HomePage() {
                              )}
                              <CardHeader>
                                <CardTitle className="text-lg group-hover:text-primary transition-colors">{newsItem.title}</CardTitle>
-                               <CardDescription>{newsItem.createdAt?.toDate ? format(newsItem.createdAt.toDate(), 'dd MMMM, yyyy') : ''}</CardDescription>
+                               <CardDescription>{newsItem.createdAt ? format(newsItem.createdAt.toDate(), 'dd MMMM, yyyy') : ''}</CardDescription>
                              </CardHeader>
                              <CardContent className="flex-grow">
                                <p className="text-sm text-muted-foreground line-clamp-3">{newsItem.content.replace(/<[^>]*>?/gm, '')}</p>

@@ -50,40 +50,42 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import type { Student, StudentStatus, FacultyData } from "@/types";
+import type { Student, StudentStatus, FacultyData, AppUser } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useCollectionOptimized, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, doc } from 'firebase/firestore';
-import { faculties as allFaculties } from '@/lib/placeholder-data';
-
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 
 export default function AdminStudentsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const allUsersQuery = useMemoFirebase(
+    () => (firestore) ? query(collection(firestore, "users"), where("role", "==", "student")) : null,
+    [firestore]
+  );
+  
+  const facultiesQuery = useMemoFirebase(
+    () => (firestore) ? collection(firestore, "faculties") : null, 
+    [firestore]
+  );
+
+  const { data: students, isLoading: usersLoading } = useCollection<Student>(allUsersQuery);
+  const { data: faculties, isLoading: facultiesLoading } = useCollection<FacultyData>(facultiesQuery);
+
+
   const [activeTab, setActiveTab] = useState<StudentStatus | 'all'>('all');
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const baseQuery = query(collection(firestore, 'users'), where('role', '==', 'student'));
-    if (activeTab === 'all') return baseQuery;
-    return query(baseQuery, where('status', '==', activeTab));
-  }, [firestore, activeTab]);
-
-  const { data: students, isLoading } = useCollectionOptimized<Student>(studentsQuery);
-  const [faculties] = useState<FacultyData[]>(allFaculties);
-
   const handleStatusChange = (studentId: string, newStatus: StudentStatus) => {
-    if(!firestore) return;
+    if (!firestore) return;
     const studentDocRef = doc(firestore, 'users', studentId);
     updateDocumentNonBlocking(studentDocRef, { status: newStatus });
     toast({ title: "Status uğurla dəyişdirildi."});
   };
 
   const handleDeleteStudent = (studentId: string) => {
-     if(!firestore) return;
+    if (!firestore) return;
     const studentDocRef = doc(firestore, 'users', studentId);
     deleteDocumentNonBlocking(studentDocRef);
     toast({ title: "Tələbə uğurla silindi."});
@@ -104,15 +106,18 @@ export default function AdminStudentsPage() {
     const filteredStudents = useMemo(() => {
         if (!students) return [];
         return students.filter(student => {
+            const statusMatch = activeTab === 'all' || student.status === activeTab;
             const facultyMatch = selectedFaculties.length === 0 || selectedFaculties.includes(student.faculty);
             const searchMatch = 
                 `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 student.email.toLowerCase().includes(searchTerm.toLowerCase());
-            return facultyMatch && searchMatch;
+            return statusMatch && facultyMatch && searchMatch;
         })
-    }, [students, selectedFaculties, searchTerm]);
+    }, [students, activeTab, selectedFaculties, searchTerm]);
 
-    if (isLoading && !students) {
+    const isLoading = usersLoading || facultiesLoading;
+
+    if (isLoading) {
       return <div className="text-center py-10">Yüklənir...</div>
     }
 
@@ -212,7 +217,7 @@ export default function AdminStudentsPage() {
                               {student.talentScore || 'N/A'}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                              {student.createdAt?.toDate ? student.createdAt.toDate().toLocaleDateString() : (student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-')}
+                              {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'}
                           </TableCell>
                           <TableCell>
                               <DropdownMenu>
