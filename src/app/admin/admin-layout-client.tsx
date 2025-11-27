@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Users2, Library, School, ListTree, ShieldCheck, Newspaper, DatabaseZap } from "lucide-react"
+import { Home, Users2, Library, School, ListTree, ShieldCheck, Newspaper } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react";
@@ -19,7 +19,6 @@ const NAV_LINKS = [
     { href: "/admin/telebe-teskilatlari", icon: Library, label: "Tələbə Təşkilatları" },
     { href: "/admin/faculties", icon: School, label: "Fakültələr" },
     { href: "/admin/categories", icon: ListTree, label: "Kateqoriyalar" },
-    { href: "/admin/migrate", icon: DatabaseZap, label: "Məlumatların Köçürülməsi" },
 ];
 
 export default function AdminLayoutClient({
@@ -77,8 +76,7 @@ export default function AdminLayoutClient({
                   href={link.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    isActive(link.href, link.exact) && "bg-muted text-primary",
-                    link.href === '/admin/migrate' && 'text-amber-600 hover:text-amber-700'
+                    isActive(link.href, link.exact) && "bg-muted text-primary"
                   )}
                 >
                   <link.icon className="h-4 w-4" />
