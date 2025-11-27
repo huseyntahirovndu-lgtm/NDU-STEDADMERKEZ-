@@ -3,7 +3,7 @@
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AppUser, Student, StudentOrganization, Admin } from '@/types';
-import { allUsers } from '@/lib/placeholder-data';
+import { allUsers as placeholderUsers, adminUser as adminUserObject } from '@/lib/placeholder-data';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -24,18 +24,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const FAKE_AUTH_DELAY = 10; 
 
-const adminUserObject: Admin = {
-    id: 'admin_user',
-    role: 'admin',
-    email: 'huseynimanov@ndu.edu.az',
-    firstName: 'Hüseyn',
-    lastName: 'Tahirov',
-};
-
 // Store passwords in memory for this mock implementation
 const passwordMap = new Map<string, string>();
 passwordMap.set(adminUserObject.email, 'huseynimanov2009@thikndu');
-allUsers.forEach(u => passwordMap.set(u.email, 'password123'));
+placeholderUsers.forEach(u => passwordMap.set(u.email, 'password123'));
 
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
@@ -49,14 +41,16 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       const userId = localStorage.getItem('userId');
       
       if (userId) {
-        const foundUser = allUsers.find(u => u.id === userId);
-        if (foundUser) {
-          setUser(foundUser);
-        } else if (userId === adminUserObject.id) {
+        if (userId === adminUserObject.id) {
           setUser(adminUserObject);
         } else {
-          localStorage.removeItem('userId');
-          setUser(null);
+          const foundUser = placeholderUsers.find(u => u.id === userId);
+          if (foundUser) {
+            setUser(foundUser);
+          } else {
+            localStorage.removeItem('userId');
+            setUser(null);
+          }
         }
       } else {
         setUser(null);
@@ -73,12 +67,22 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     await new Promise(res => setTimeout(res, FAKE_AUTH_DELAY));
 
     const expectedPassword = passwordMap.get(email);
+
+    // Admin check
+    if (email === adminUserObject.email && pass === 'huseynimanov2009@thikndu') {
+        setUser(adminUserObject);
+        localStorage.setItem('userId', adminUserObject.id);
+        router.push('/admin/dashboard');
+        setLoading(false);
+        return true;
+    }
+    
     if (!expectedPassword || expectedPassword !== pass) {
         setLoading(false);
         return false;
     }
     
-    const foundUser = allUsers.find(u => u.email === email);
+    const foundUser = placeholderUsers.find(u => u.email === email);
     
     if (foundUser) {
         setUser(foundUser);
@@ -87,12 +91,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         if (foundUser.role === 'student') router.push('/student-dashboard');
         else if (foundUser.role === 'student-organization') router.push('/telebe-teskilati-paneli/dashboard');
         
-        setLoading(false);
-        return true;
-    } else if (email === adminUserObject.email) {
-        setUser(adminUserObject);
-        localStorage.setItem('userId', adminUserObject.id);
-        router.push('/admin/dashboard');
         setLoading(false);
         return true;
     }
@@ -115,14 +113,12 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
      setLoading(true);
      await new Promise(res => setTimeout(res, FAKE_AUTH_DELAY));
 
-    if (allUsers.some(u => u.email === newUser.email) || passwordMap.has(newUser.email)) {
+    if (placeholderUsers.some(u => u.email === newUser.email) || passwordMap.has(newUser.email)) {
         console.log(`User with this email already exists.`);
         setLoading(false);
         return false;
     }
     
-    // This is a mock, so we won't actually add the user to the placeholder file.
-    // In a real scenario, this would be an API call.
     const newUserId = uuidv4();
     const userWithId = {
         ...newUser,
@@ -144,8 +140,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = (updatedData: Partial<AppUser>): boolean => {
     if (!user) return false;
-    // This is a mock. We will update the user state in the context, but it won't persist
-    // in the placeholder-data.ts file. A real implementation would need an API.
+    
     const newUserData = { ...user, ...updatedData };
     setUser(newUserData);
     console.log("User data updated in context (mock):", newUserData);
