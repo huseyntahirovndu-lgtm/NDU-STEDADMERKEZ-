@@ -51,7 +51,7 @@ export default function OrgUpdatesPage() {
     const { organization } = useStudentOrg();
 
     const updatesQuery = useMemoFirebase(() => 
-        (firestore && organization) ? query(collection(firestore, `users/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
+        (firestore && organization) ? query(collection(firestore, `student-organizations/${organization.id}/updates`), orderBy("createdAt", "desc")) : null, 
         [firestore, organization]
     );
     const { data: updates, isLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
@@ -61,7 +61,7 @@ export default function OrgUpdatesPage() {
 
         const batch = writeBatch(firestore);
 
-        const subCollectionDocRef = doc(firestore, `users/${organization.id}/updates`, updateId);
+        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, updateId);
         const topLevelDocRef = doc(firestore, 'student-org-updates', updateId);
 
         batch.delete(subCollectionDocRef);
