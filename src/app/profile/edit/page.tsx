@@ -190,6 +190,7 @@ function EditProfilePageComponent() {
     mode: 'onChange',
     defaultValues: {
         skills: [],
+        courseYear: 1,
     }
   });
   
@@ -219,7 +220,7 @@ function EditProfilePageComponent() {
         lastName: targetUser.lastName || '',
         profilePictureUrl: targetUser.profilePictureUrl || '',
         major: targetUser.major || '',
-        courseYear: targetUser.courseYear || undefined,
+        courseYear: targetUser.courseYear || 1,
         educationForm: targetUser.educationForm || '',
         gpa: targetUser.gpa || 0,
         skills: targetUser.skills || [],
