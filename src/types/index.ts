@@ -32,17 +32,12 @@ export interface Skill {
 
 export interface Project {
   id: string;
-  ownerId: string; // Owner ID (can be student or organization)
-  ownerType: 'student' | 'organization';
+  studentId: string;
   title: string;
   description: string;
   role: string;
   link?: string;
-  mediaLink?: string;
   teamMembers?: string[];
-  teamMemberIds?: string[];
-  invitedStudentIds?: string[];
-  applicantIds?: string[];
   status: 'davam edir' | 'tamamlanıb';
 }
 
