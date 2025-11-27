@@ -1,14 +1,14 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, documentId, query, where } from 'firebase/firestore';
 import { Student, StudentOrganization } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { students as allStudents } from '@/lib/placeholder-data';
+import { useState, useEffect } from 'react';
 
 interface MembersListProps {
   organization: StudentOrganization;
@@ -16,20 +16,18 @@ interface MembersListProps {
 
 export default function MembersList({ organization }: MembersListProps) {
   const { user: currentUser } = useAuth();
-  const firestore = useFirestore();
+  const [members, setMembers] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const membersQuery = useMemoFirebase(
-    () =>
-      currentUser && organization?.memberIds && organization.memberIds.length > 0
-        ? query(
-            collection(firestore, 'users'),
-            where(documentId(), 'in', organization.memberIds)
-          )
-        : null,
-    [firestore, JSON.stringify(organization?.memberIds), currentUser]
-  );
 
-  const { data: members, isLoading: membersLoading } = useCollectionOptimized<Student>(membersQuery, { enableCache: true, disableRealtimeOnInit: true });
+  useEffect(() => {
+    if (organization?.memberIds && organization.memberIds.length > 0) {
+      const orgMembers = allStudents.filter(s => organization.memberIds.includes(s.id));
+      setMembers(orgMembers);
+    }
+    setIsLoading(false);
+  }, [organization]);
+
 
   return (
     <Card>
@@ -44,7 +42,7 @@ export default function MembersList({ organization }: MembersListProps) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {currentUser && membersLoading && (
+        {currentUser && isLoading && (
            <div className="space-y-3">
              <div className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -80,7 +78,7 @@ export default function MembersList({ organization }: MembersListProps) {
               ))}
             </div>
           </div>
-        ) : currentUser && !membersLoading ? (
+        ) : currentUser && !isLoading ? (
           <p className="text-sm text-muted-foreground">
             Bu təşkilatın heç bir üzvü yoxdur.
           </p>

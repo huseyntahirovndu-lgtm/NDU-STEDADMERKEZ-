@@ -24,38 +24,26 @@ import {
 } from "@/components/ui/table"
 import Link from "next/link";
 import { Student, StudentOrganization } from "@/types";
-import { useCollectionOptimized, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { useAuth } from "@/hooks/use-auth";
+import { students as allStudents, studentOrganizations as allStudentOrgs } from "@/lib/placeholder-data";
+import { useState, useEffect } from "react";
 
 export default function AdminDashboard() {
   const { user: adminUser, loading: adminLoading } = useAuth();
-  const firestore = useFirestore();
-  
-  const studentsQuery = useMemoFirebase(
-    () => (firestore && adminUser?.role === 'admin') ? query(collection(firestore, "users"), where("role", "==", "student")) : null,
-    [firestore, adminUser?.role]
-  );
-  
-  const studentOrgsQuery = useMemoFirebase(
-    () => (firestore && adminUser?.role === 'admin') ? query(collection(firestore, "users"), where("role", "==", "student-organization")) : null,
-    [firestore, adminUser?.role]
-  );
-  
-  const recentStudentsQuery = useMemoFirebase(
-    () => (firestore && adminUser?.role === 'admin') ? query(
-      collection(firestore, "users"),
-      where("role", "==", "student"),
-      orderBy("createdAt", "desc"),
-      limit(5)
-    ) : null,
-    [firestore, adminUser?.role]
-  );
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentOrgs, setStudentOrgs] = useState<StudentOrganization[]>([]);
+  const [recentStudents, setRecentStudents] = useState<Student[]>([]);
 
-  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: studentOrgs, isLoading: orgsLoading } = useCollectionOptimized<StudentOrganization>(studentOrgsQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: recentStudents, isLoading: recentStudentsLoading } = useCollectionOptimized<Student>(recentStudentsQuery, { enableCache: true, disableRealtimeOnInit: true });
+  const isLoading = adminLoading;
 
-  const isLoading = studentsLoading || orgsLoading || recentStudentsLoading || adminLoading;
+  useEffect(() => {
+    if (adminUser?.role === 'admin') {
+        setStudents(allStudents);
+        setStudentOrgs(allStudentOrgs);
+        const sortedStudents = [...allStudents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setRecentStudents(sortedStudents.slice(0, 5));
+    }
+  }, [adminUser]);
 
   if (isLoading) {
     return (
@@ -68,8 +56,8 @@ export default function AdminDashboard() {
     );
   }
   
-  const totalStudents = students?.length ?? 0;
-  const totalStudentOrgs = studentOrgs?.length ?? 0;
+  const totalStudents = students.length;
+  const totalStudentOrgs = studentOrgs.length;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -135,12 +123,12 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentStudents?.length === 0 ? (
+                  {recentStudents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center">Heç bir tələbə tapılmadı</TableCell>
                     </TableRow>
                   ) : (
-                    recentStudents?.map((student: Student) => (
+                    recentStudents.map((student: Student) => (
                       <TableRow key={student.id}>
                         <TableCell>
                           <div className="font-medium">{student.firstName} {student.lastName}</div>

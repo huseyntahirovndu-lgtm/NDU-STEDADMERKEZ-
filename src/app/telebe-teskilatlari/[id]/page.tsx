@@ -1,8 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useDoc, useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
 import { StudentOrganization, StudentOrgUpdate } from '@/types';
-import { doc, collection, query, orderBy, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +9,8 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import MembersList from './members-list';
-import { useAuth } from '@/hooks/use-auth';
+import { studentOrganizations, studentOrgUpdates } from '@/lib/placeholder-data';
+import { useState, useEffect } from 'react';
 
 
 function OrgDetailsLoading() {
@@ -33,21 +32,27 @@ function OrgDetailsLoading() {
 
 export default function StudentOrgDetailsPage() {
   const { id } = useParams();
-  const firestore = useFirestore();
-  const { user: currentUser } = useAuth();
-
   const orgId = typeof id === 'string' ? id : '';
 
-  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'users', orgId) : null), [firestore, orgId]);
-  const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
-  
-  const updatesQuery = useMemoFirebase(
-    () => (firestore && orgId ? query(collection(firestore, 'student-org-updates'), where('organizationId', '==', orgId), orderBy('createdAt', 'desc')) : null),
-    [firestore, orgId]
-  );
-  const { data: updates, isLoading: updatesLoading } = useCollectionOptimized<StudentOrgUpdate>(updatesQuery, { enableCache: true, disableRealtimeOnInit: true });
+  const [organization, setOrganization] = useState<StudentOrganization | undefined>();
+  const [updates, setUpdates] = useState<StudentOrgUpdate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isLoading = orgLoading || updatesLoading;
+  useEffect(() => {
+    if (orgId) {
+      const orgData = studentOrganizations.find(o => o.id === orgId);
+      setOrganization(orgData);
+
+      if (orgData) {
+        const orgUpdates = studentOrgUpdates
+          .filter(u => u.organizationId === orgId)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setUpdates(orgUpdates);
+      }
+      setIsLoading(false);
+    }
+  }, [orgId]);
+
 
   if (isLoading) {
     return <OrgDetailsLoading />;
@@ -101,7 +106,7 @@ export default function StudentOrgDetailsPage() {
                                     <div className="p-4">
                                         <h3 className="font-bold text-lg group-hover:text-primary mb-1">{update.title}</h3>
                                         <p className="text-xs text-muted-foreground mb-2">
-                                            {update.createdAt ? format(update.createdAt.toDate(), 'dd MMMM, yyyy') : ''}
+                                            {update.createdAt ? format(new Date(update.createdAt), 'dd MMMM, yyyy') : ''}
                                         </p>
                                         <p className="text-sm text-muted-foreground line-clamp-2">
                                              {update.content.replace(/<[^>]*>?/gm, '')}

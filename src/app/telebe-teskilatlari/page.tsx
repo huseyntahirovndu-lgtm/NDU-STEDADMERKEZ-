@@ -1,21 +1,17 @@
 'use client';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
 import { StudentOrganization } from '@/types';
-import { collection, query, where } from 'firebase/firestore';
+import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Building } from 'lucide-react';
+import { studentOrganizations } from '@/lib/placeholder-data';
+
 
 export default function StudentOrganizationsPage() {
-  const firestore = useFirestore();
-
-  const studentOrgsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'users'), where("role", "==", "student-organization"), where('status', '==', 'təsdiqlənmiş')) : null),
-    [firestore]
-  );
-  const { data: studentOrgs, isLoading } = useCollectionOptimized<StudentOrganization>(studentOrgsQuery, { enableCache: true, disableRealtimeOnInit: true });
+  const [orgs] = useState<StudentOrganization[]>(() => studentOrganizations.filter(org => org.status === 'təsdiqlənmiş'));
+  const [isLoading] = useState(false); // Mocking loading state
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -32,9 +28,9 @@ export default function StudentOrganizationsPage() {
             <Skeleton key={i} className="h-48 w-full rounded-lg" />
           ))}
         </div>
-      ) : studentOrgs && studentOrgs.length > 0 ? (
+      ) : orgs && orgs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {studentOrgs.map((org) => (
+          {orgs.map((org) => (
             <Link key={org.id} href={`/telebe-teskilatlari/${org.id}`} className="group">
               <Card className="h-full overflow-hidden transition-shadow duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center gap-4">

@@ -15,15 +15,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { students as allStudents, faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
 
 
 type QuickFilter = 'none' | 'high-potential' | 'startup' | 'newcomer';
 
 export default function SearchClient() {
   const searchParams = useSearchParams();
-  const firestore = useFirestore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [facultyFilter, setFacultyFilter] = useState('all');
@@ -32,15 +30,18 @@ export default function SearchClient() {
   const [sortBy, setSortBy] = useState('talentScore');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('none');
   
-  const studentsQuery = useMemoFirebase(() => query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")), [firestore]);
-  const facultiesQuery = useMemoFirebase(() => collection(firestore, "faculties"), [firestore]);
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, "categories"), [firestore]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [faculties, setFaculties] = useState<FacultyData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: faculties, isLoading: facultiesLoading } = useCollectionOptimized<FacultyData>(facultiesQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: categories, isLoading: categoriesLoading } = useCollectionOptimized<CategoryData>(categoriesQuery, { enableCache: true, disableRealtimeOnInit: true });
-  
-  const isLoading = studentsLoading || facultiesLoading || categoriesLoading;
+  useEffect(() => {
+    // Simulate fetching data
+    setStudents(allStudents.filter(s => s.status === 'təsdiqlənmiş'));
+    setFaculties(allFaculties);
+    setCategories(allCategories);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
     const sortParam = searchParams.get('sort');

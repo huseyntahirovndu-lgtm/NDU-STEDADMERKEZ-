@@ -1,7 +1,5 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
 import { News, Admin } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -12,6 +10,8 @@ import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { news as allNews } from '@/lib/placeholder-data';
+import { adminUser } from '@/lib/placeholder-data';
 
 function NewsDetailsLoading() {
     return (
@@ -35,29 +35,25 @@ function NewsDetailsLoading() {
 
 export default function NewsDetailsPage() {
     const { slug } = useParams();
-    const firestore = useFirestore();
     const newsSlug = typeof slug === 'string' ? slug : '';
 
-    const newsQuery = useMemoFirebase(() =>
-        firestore && newsSlug
-            ? query(collection(firestore, 'news'), where('slug', '==', newsSlug), limit(1))
-            : null,
-        [firestore, newsSlug]
-    );
-
-    const { data: newsData, isLoading: isNewsLoading } = useCollectionOptimized<News>(newsQuery, { enableCache: true, disableRealtimeOnInit: true });
-    const newsItem = newsData?.[0];
-
-    // Admin user is hardcoded and doesn't need a separate query
-    const author: Admin | null = newsItem ? {
-        id: 'admin_user',
-        role: 'admin',
-        email: 'huseynimanov@ndu.edu.az',
-        firstName: 'Hüseyn',
-        lastName: 'Tahirov',
-    } : null;
-
+    const [newsItem, setNewsItem] = useState<News | undefined>();
+    const [author, setAuthor] = useState<Admin | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [sanitizedContent, setSanitizedContent] = useState('');
+
+    useEffect(() => {
+        if (newsSlug) {
+            const foundNews = allNews.find(n => n.slug === newsSlug);
+            setNewsItem(foundNews);
+
+            if (foundNews?.authorId === adminUser.id) {
+                setAuthor(adminUser);
+            }
+            setIsLoading(false);
+        }
+    }, [newsSlug]);
+
 
     useEffect(() => {
         if (newsItem?.content && typeof window !== 'undefined') {
@@ -65,8 +61,6 @@ export default function NewsDetailsPage() {
         }
     }, [newsItem?.content]);
 
-    const isLoading = isNewsLoading;
-    
     if (isLoading) {
         return <NewsDetailsLoading />;
     }
@@ -90,8 +84,8 @@ export default function NewsDetailsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <time dateTime={newsItem.createdAt?.toDate().toISOString()}>
-                            {newsItem.createdAt ? format(newsItem.createdAt.toDate(), 'dd MMMM, yyyy') : ''}
+                        <time dateTime={new Date(newsItem.createdAt).toISOString()}>
+                            {format(new Date(newsItem.createdAt), 'dd MMMM, yyyy')}
                         </time>
                     </div>
                 </div>

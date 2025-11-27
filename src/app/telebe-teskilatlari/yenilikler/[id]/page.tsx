@@ -1,7 +1,5 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { StudentOrgUpdate, StudentOrganization } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -11,27 +9,30 @@ import DOMPurify from 'dompurify';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { studentOrgUpdates, studentOrganizations } from '@/lib/placeholder-data';
 
 export default function StudentOrgUpdateDetailsPage() {
     const { id } = useParams();
-    const firestore = useFirestore();
     const updateId = typeof id === 'string' ? id : '';
     
-    const updateDocRef = useMemoFirebase(() => 
-      firestore && updateId ? doc(firestore, 'student-org-updates', updateId) : null,
-      [firestore, updateId]
-    );
-    const { data: update, isLoading: isUpdateLoading } = useDoc<StudentOrgUpdate>(updateDocRef);
-
-    const orgDocRef = useMemoFirebase(() =>
-      firestore && update?.organizationId ? doc(firestore, 'users', update.organizationId) : null,
-      [firestore, update?.organizationId]
-    );
-    const { data: organization, isLoading: isOrgLoading } = useDoc<StudentOrganization>(orgDocRef);
-    
-    const isLoading = isUpdateLoading || (update && !organization);
-
+    const [update, setUpdate] = useState<StudentOrgUpdate | undefined>();
+    const [organization, setOrganization] = useState<StudentOrganization | undefined>();
+    const [isLoading, setIsLoading] = useState(true);
     const [sanitizedContent, setSanitizedContent] = useState('');
+
+    useEffect(() => {
+        if (updateId) {
+            const foundUpdate = studentOrgUpdates.find(u => u.id === updateId);
+            setUpdate(foundUpdate);
+
+            if (foundUpdate) {
+                const foundOrg = studentOrganizations.find(o => o.id === foundUpdate.organizationId);
+                setOrganization(foundOrg);
+            }
+            setIsLoading(false);
+        }
+    }, [updateId]);
+
 
     useEffect(() => {
       if (update?.content && typeof window !== 'undefined') {
@@ -84,8 +85,8 @@ export default function StudentOrgUpdateDetailsPage() {
                         </Link>
                         <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <time dateTime={update.createdAt?.toDate().toISOString()}>
-                                {update.createdAt ? format(update.createdAt.toDate(), 'dd MMMM, yyyy') : ''}
+                            <time dateTime={new Date(update.createdAt).toISOString()}>
+                                {format(new Date(update.createdAt), 'dd MMMM, yyyy')}
                             </time>
                         </div>
                     </div>

@@ -50,44 +50,28 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import type { Student, StudentStatus, FacultyData, AppUser } from "@/types";
+import type { Student, StudentStatus, FacultyData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useCollectionOptimized, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { students as allStudents, faculties as allFaculties } from "@/lib/placeholder-data";
 
 export default function AdminStudentsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const allUsersQuery = useMemoFirebase(
-    () => (firestore) ? query(collection(firestore, "users"), where("role", "==", "student")) : null,
-    [firestore]
-  );
   
-  const facultiesQuery = useMemoFirebase(
-    () => (firestore) ? collection(firestore, "faculties") : null, 
-    [firestore]
-  );
-
-  const { data: students, isLoading: usersLoading } = useCollectionOptimized<Student>(allUsersQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: faculties, isLoading: facultiesLoading } = useCollectionOptimized<FacultyData>(facultiesQuery, { enableCache: true, disableRealtimeOnInit: true });
-
+  const [students, setStudents] = useState<Student[]>(allStudents);
+  const [faculties] = useState<FacultyData[]>(allFaculties);
 
   const [activeTab, setActiveTab] = useState<StudentStatus | 'all'>('all');
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleStatusChange = (studentId: string, newStatus: StudentStatus) => {
-    if (!firestore) return;
-    const studentDocRef = doc(firestore, 'users', studentId);
-    updateDocumentNonBlocking(studentDocRef, { status: newStatus });
+    setStudents(prev => prev.map(s => s.id === studentId ? {...s, status: newStatus} : s));
     toast({ title: "Status uğurla dəyişdirildi."});
   };
 
   const handleDeleteStudent = (studentId: string) => {
-    if (!firestore) return;
-    const studentDocRef = doc(firestore, 'users', studentId);
-    deleteDocumentNonBlocking(studentDocRef);
+    setStudents(prev => prev.filter(s => s.id !== studentId));
     toast({ title: "Tələbə uğurla silindi."});
   }
 
@@ -114,8 +98,6 @@ export default function AdminStudentsPage() {
             return statusMatch && facultyMatch && searchMatch;
         })
     }, [students, activeTab, selectedFaculties, searchTerm]);
-
-    const isLoading = usersLoading || facultiesLoading;
 
     if (isLoading) {
       return <div className="text-center py-10">Yüklənir...</div>

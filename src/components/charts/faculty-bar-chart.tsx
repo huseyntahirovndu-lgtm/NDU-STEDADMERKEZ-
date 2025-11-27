@@ -15,8 +15,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Student } from '@/types';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { faculties as allFaculties } from '@/lib/placeholder-data';
 
 
 interface FacultyBarChartProps {
@@ -24,11 +23,8 @@ interface FacultyBarChartProps {
 }
 
 export function FacultyBarChart({ students }: FacultyBarChartProps) {
-  const firestore = useFirestore();
-  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'faculties') : null, [firestore]);
-  const { data: faculties } = useCollectionOptimized<{name: string}>(facultiesQuery, { enableCache: true, disableRealtimeOnInit: true });
 
-  const chartData = faculties?.map(faculty => ({
+  const chartData = allFaculties?.map(faculty => ({
       name: faculty.name.split(' ')[0], // Shorten name for display
       total: students.filter(student => student.faculty === faculty.name).length
   })).filter(d => d.total > 0) || [];

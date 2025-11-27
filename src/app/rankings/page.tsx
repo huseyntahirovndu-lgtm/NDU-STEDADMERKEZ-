@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Student, CategoryData, FacultyData } from '@/types';
 import {
@@ -15,34 +15,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { students as allStudents, faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
 
 
 export default function RankingsPage() {
-  const firestore = useFirestore();
-
   const [facultyFilter, setFacultyFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const studentsQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, 
-    [firestore]
-  );
-  const facultiesQuery = useMemoFirebase(() => 
-    firestore ? collection(firestore, "faculties") : null, 
-    [firestore]
-  );
-  const categoriesQuery = useMemoFirebase(() => 
-    firestore ? collection(firestore, "categories") : null, 
-    [firestore]
-  );
+  const [students, setStudents] = useState<Student[]>([]);
+  const [faculties, setFaculties] = useState<FacultyData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: faculties, isLoading: facultiesLoading } = useCollectionOptimized<FacultyData>(facultiesQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: categories, isLoading: categoriesLoading } = useCollectionOptimized<CategoryData>(categoriesQuery, { enableCache: true, disableRealtimeOnInit: true });
-
-  const isLoading = studentsLoading || facultiesLoading || categoriesLoading;
+  useEffect(() => {
+    // Simulate fetching data
+    setStudents(allStudents.filter(s => s.status === 'təsdiqlənmiş'));
+    setFaculties(allFaculties);
+    setCategories(allCategories);
+    setIsLoading(false);
+  }, []);
 
   const rankedStudents = useMemo(() => {
     if (!students) return [];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -36,8 +36,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Student, FacultyData, CategoryData } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
 
 
 const formSchema = z.object({
@@ -70,13 +69,17 @@ export default function RegisterStudentPage() {
   const { register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const firestore = useFirestore();
 
-  const facultiesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'faculties') : null, [firestore]);
-  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'categories') : null, [firestore]);
+  const [faculties, setFaculties] = useState<FacultyData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  const { data: faculties, isLoading: facultiesLoading } = useCollectionOptimized<FacultyData>(facultiesQuery, { enableCache: true, disableRealtimeOnInit: true });
-  const { data: categories, isLoading: categoriesLoading } = useCollectionOptimized<CategoryData>(categoriesQuery, { enableCache: true, disableRealtimeOnInit: true });
+  useEffect(() => {
+    setFaculties(allFaculties);
+    setCategories(allCategories);
+    setDataLoading(false);
+  }, []);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -219,7 +222,7 @@ export default function RegisterStudentPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {facultiesLoading ? <SelectItem value="loading" disabled>Yüklənir...</SelectItem> : faculties?.map(faculty => (
+                        {dataLoading ? <SelectItem value="loading" disabled>Yüklənir...</SelectItem> : faculties?.map(faculty => (
                           <SelectItem key={faculty.id} value={faculty.name}>
                             {faculty.name}
                           </SelectItem>
@@ -282,7 +285,7 @@ export default function RegisterStudentPage() {
                    <FormDescription>
                     Aid olduğunuz bir və ya bir neçə kateqoriyanı seçin.
                   </FormDescription>
-                  {categoriesLoading ? <p>Yüklənir...</p> : (
+                  {dataLoading ? <p>Yüklənir...</p> : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 py-2">
                   {categories?.map((item) => (
                     <FormField
@@ -325,7 +328,7 @@ export default function RegisterStudentPage() {
             />
 
 
-            <Button type="submit" className="w-full" disabled={isLoading || facultiesLoading || categoriesLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || dataLoading}>
               {isLoading ? 'Hesab yaradılır...' : 'Hesab yarat'}
             </Button>
           </form>
