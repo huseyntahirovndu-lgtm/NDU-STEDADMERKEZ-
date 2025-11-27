@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-import { Student, CategoryData, FacultyData } from '@/types';
+import { Student, CategoryData, FacultyData, AppUser } from '@/types';
 import { StudentCard } from '@/components/student-card';
 import { Input } from '@/components/ui/input';
 import { Search as SearchIcon } from 'lucide-react';
@@ -15,13 +15,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { students as allStudents, faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
+import { students as placeholderStudents, faculties as allFaculties, categories as allCategories } from '@/lib/placeholder-data';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 
 type QuickFilter = 'none' | 'high-potential' | 'startup' | 'newcomer';
 
 export default function SearchClient() {
   const searchParams = useSearchParams();
+  const firestore = useFirestore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [facultyFilter, setFacultyFilter] = useState('all');
@@ -30,18 +33,37 @@ export default function SearchClient() {
   const [sortBy, setSortBy] = useState('talentScore');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('none');
   
-  const [students, setStudents] = useState<Student[]>([]);
   const [faculties, setFaculties] = useState<FacultyData[]>([]);
   const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Canlı datanı çəkmək üçün sorğu
+  const liveStudentsQuery = useMemo(() => 
+    firestore ? query(collection(firestore, 'users'), where('role', '==', 'student'), where('status', '==', 'təsdiqlənmiş')) : null
+  , [firestore]);
+
+  const { data: liveStudents, isLoading: liveLoading } = useCollection<Student>(liveStudentsQuery);
+
   useEffect(() => {
-    // Simulate fetching data
-    setStudents(allStudents.filter(s => s.status === 'təsdiqlənmiş'));
+    // Lokal və canlı datanı birləşdir
+    const combinedStudents = [...placeholderStudents];
+    const localStudentIds = new Set(placeholderStudents.map(s => s.id));
+
+    if (liveStudents) {
+      liveStudents.forEach(liveStudent => {
+        if (!localStudentIds.has(liveStudent.id)) {
+          combinedStudents.push(liveStudent);
+        }
+      });
+    }
+
+    setAllStudents(combinedStudents.filter(s => s.status === 'təsdiqlənmiş'));
     setFaculties(allFaculties);
     setCategories(allCategories);
-    setIsLoading(false);
-  }, []);
+    setIsLoading(liveLoading);
+    
+  }, [placeholderStudents, liveStudents, liveLoading]);
 
   useEffect(() => {
     const sortParam = searchParams.get('sort');
@@ -52,8 +74,8 @@ export default function SearchClient() {
 
 
   const filteredStudents = useMemo(() => {
-    if (!students) return [];
-    let filtered = [...students];
+    if (!allStudents) return [];
+    let filtered = [...allStudents];
 
     if (quickFilter === 'high-potential') {
         filtered = filtered.filter(s => (s.talentScore || 0) >= 90);
@@ -87,7 +109,7 @@ export default function SearchClient() {
 
 
     return filtered;
-  }, [students, searchTerm, facultyFilter, courseFilter, categoryFilter, sortBy, quickFilter]);
+  }, [allStudents, searchTerm, facultyFilter, courseFilter, categoryFilter, sortBy, quickFilter]);
 
   const handleQuickFilterClick = (filter: QuickFilter) => {
     setQuickFilter(current => current === filter ? 'none' : filter);

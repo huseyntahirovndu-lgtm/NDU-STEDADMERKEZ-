@@ -41,9 +41,14 @@ export function StudentCard({ student: initialStudent, className }: StudentCardP
   const firestore = useFirestore();
 
   const studentDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', initialStudent.id) : null, [firestore, initialStudent.id]);
-  const { data: liveStudentData } = useDoc<Student>(studentDocRef);
+  // Şəkili canlı olaraq Firestore-dan çəkmək üçün useDoc istifadə edirik
+  const { data: liveStudentData } = useDoc<{ profilePictureUrl?: string }>(studentDocRef);
 
-  const student = liveStudentData || initialStudent;
+  // Əsas məlumatları lokaldan götürürük, amma şəkli canlı datadan yeniləyirik
+  const student = {
+      ...initialStudent,
+      profilePictureUrl: liveStudentData?.profilePictureUrl ?? initialStudent.profilePictureUrl
+  };
 
   const organization = user?.role === 'organization' ? user as Organization : null;
   const isSaved = organization?.savedStudentIds?.includes(student.id);
