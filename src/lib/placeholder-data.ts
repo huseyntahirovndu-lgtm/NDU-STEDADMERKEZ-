@@ -1,4 +1,3 @@
-
 import { Student, StudentOrganization, Admin, Project, Achievement, Certificate, News, StudentOrgUpdate, FacultyData, CategoryData, AppUser } from '@/types';
 
 export const adminUser: Admin = {
@@ -309,7 +308,7 @@ export const students: Student[] = [
     linkedInURL: "",
     courseYear: 3,
     behanceURL: "",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-97b1fa22.jpg",
+    profilePictureUrl: "",
     skills: [],
     projectIds: [],
     lastName: "Əzizova",
@@ -339,7 +338,7 @@ export const students: Student[] = [
     gpa: 94,
     googleScholarURL: "",
     certificateIds: [],
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-f1c25946.jpg",
+    profilePictureUrl: "",
     achievementIds: [],
     linkedInURL: "",
     status: "təsdiqlənmiş",
@@ -413,7 +412,7 @@ export const students: Student[] = [
     ],
     githubURL: "",
     lastName: "Çakır",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-214297d2.jpg",
+    profilePictureUrl: "",
     status: "gözləyir",
     faculty: "Tibb fakültəsi",
     role: "student",
@@ -488,7 +487,7 @@ export const students: Student[] = [
     linkedInURL: "",
     certificateIds: [],
     achievementIds: [],
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-bda5b216.jpg",
+    profilePictureUrl: "",
     skills: [
       {
         name: "Elmi, publisistik məqalələr araşdırıb, yazmaq",
@@ -532,7 +531,7 @@ export const students: Student[] = [
     role: "student"
   },
   {
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-541bf3bc.jpg",
+    profilePictureUrl: "",
     projectIds: [],
     portfolioURL: "",
     faculty: "Tibb fakültəsi",
@@ -563,7 +562,7 @@ export const students: Student[] = [
     achievementIds: [],
     skills: [],
     firstName: "Zeynəb ",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-da05fb82.jpg",
+    profilePictureUrl: "",
     projectIds: [],
     githubURL: "",
     faculty: "Tarix-filologiya fakültəsi",
@@ -603,7 +602,7 @@ export const students: Student[] = [
     certificateIds: []
   },
   {
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-92eda78b.jpg",
+    profilePictureUrl: "",
     role: "student",
     firstName: "Emil",
     category: "Elmi məqalə yazmaq və araşdırma aparmaq, Tədqiqatçılıq",
@@ -668,7 +667,7 @@ export const students: Student[] = [
     projectIds: [],
     achievementIds: [],
     role: "student",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-0b013562.jpg",
+    profilePictureUrl: "",
     certificateIds: [],
     id: "556b6a6f-06ae-447e-b9e4-9071318142e3",
     email: "sevinchsnva2006@gmail.com",
@@ -717,7 +716,7 @@ export const students: Student[] = [
     educationForm: "Əyani",
     category: "Kibertəhlükəsizlik bacarıqları, Startup ideyaları və model hazırlamaq, Tədqiqatçılıq, Süni intellekt və maşın öyrənməsi, Məlumatların təhlili və statistik yanaşma, Elmi məqalə yazmaq və araşdırma aparmaq",
     instagramURL: "https://www.instagram.com/ibrahimov__.85?igsh=cmpmajhwemw4NXp1",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-b0c34164.jpg",
+    profilePictureUrl: "",
     behanceURL: "",
     talentScore: 95,
     projectIds: [],
@@ -807,9 +806,9 @@ export const students: Student[] = [
     educationForm: "Əyani",
     projectIds: [],
     linkedInURL: null,
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-856ff7cc.jpg",
+    profilePictureUrl: "",
     createdAt: "2025-11-24T10:05:21.788Z",
-    status: "təsdiqlənmiş",
+    status: null,
     instagramURL: null,
     lastName: "Tahirov",
     behanceURL: null
@@ -835,7 +834,7 @@ export const students: Student[] = [
     portfolioURL: "",
     projectIds: [],
     id: "5f1405af-f691-4539-a049-19ea95a69b1b",
-    category: "Musiqi ifaçılığı (fortepiano, tar, gitar, qarmon və s.), Futbol, voleybol və basketbol",
+    category: "Musiqi ifaçılığı (fortepiano, tar, gitar, qarmon və s.)",
     certificateIds: []
   },
   {
@@ -855,7 +854,7 @@ export const students: Student[] = [
     projectIds: [],
     faculty: "Xarici dillər fakültəsi",
     achievementIds: [],
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-e6432d5b.jpg",
+    profilePictureUrl: "",
     lastName: "İsmayılova",
     instagramURL: "",
     status: "gözləyir",
@@ -888,37 +887,37 @@ export const students: Student[] = [
   },
   {
     status: "gözləyir",
-    certificateIds: [],
-    talentScore: 10,
-    linkedInURL: "",
-    achievementIds: [],
+    role: "student",
+    faculty: "Pedaqoji fakültə",
+    behanceURL: "",
     skills: [
       {
         level: "Başlanğıc",
         name: "Voleybol, resm, uzguculuk, təşkilatçılıq"
       }
     ],
-    firstName: "Züleyxa",
-    profilePictureUrl: "",
-    projectIds: [],
+    linkedInURL: "",
     githubURL: "",
-    faculty: "Pedaqoji fakültə",
+    gpa: 0,
     instagramURL: "",
-    major: "Fiziki tərbuyə və çağırışa qədərki hazırlıq müəllimliyi",
-    portfolioURL: "",
-    createdAt: "2025-11-25T05:46:23.857Z",
-    behanceURL: "",
+    profilePictureUrl: "",
     lastName: "Rüstəmli",
+    certificateIds: [],
+    projectIds: [],
+    successStory: "8 ci sinifden voleybolla mesqulam\nMekteb illerinde tovuz regionalin komandasinda idim\nDaha sonra bakida ryuga komandasina daxil oldum\nSonra universitet ucun naxcivana geldim ve burada universitetin, fakultenin komandasinin uzvuyem.\nIndiyene kimi qatildigim her yarisda qalib olmusuq.\nMasa tennisinide bacariram\nFakulteler arasi yarisda 1 ci yer olmusdum.\n\nElave olaraq  uzguculuk, resm qabiliyyetimde cox yaxsidir.\n\nHemcinin teskilatciligimda yaxsidir. Hazirda pedaqoji fakultenin tgt sedriyem.",
     courseYear: 2,
     category: "Rəsm, karikatura və rəngkarlıq, Futbol, voleybol və basketbol, Atletika, gimnastika və üzgüçülük",
-    id: "718dc50e-b814-4dd0-9e26-693b3e23c73a",
-    email: "rustemlizuleyxa@gmail.com",
-    role: "student",
-    gpa: 0,
-    successStory: "8 ci sinifden voleybolla mesqulam\nMekteb illerinde tovuz regionalin komandasinda idim\nDaha sonra bakida ryuga komandasina daxil oldum\nSonra universitet ucun naxcivana geldim ve burada universitetin, fakultenin komandasinin uzvuyem.\nIndiyene kimi qatildigim her yarisda qalib olmusuq.\nMasa tennisinide bacariram\nFakulteler arasi yarisda 1 ci yer olmusdum.\n\nElave olaraq  uzguculuk, resm qabiliyyetimde cox yaxsidir.\n\nHemcinin teskilatciligimda yaxsidir. Hazirda pedaqoji fakultenin tgt sedriyem.",
-    educationForm: "Əyani",
+    talentScore: 10,
     googleScholarURL: "",
-    youtubeURL: ""
+    portfolioURL: "",
+    email: "rustemlizuleyxa@gmail.com",
+    firstName: "Züleyxa",
+    major: "Fiziki tərbuyə və çağırışa qədərki hazırlıq müəllimliyi",
+    educationForm: "Əyani",
+    youtubeURL: "",
+    achievementIds: [],
+    createdAt: "2025-11-25T05:46:23.857Z",
+    id: "718dc50e-b814-4dd0-9e26-693b3e23c73a"
   },
   {
     projectIds: [],
@@ -967,7 +966,7 @@ export const students: Student[] = [
     githubURL: "",
     role: "student",
     linkedInURL: "https://www.linkedin.com/in/g%C3%BCnay-h%C3%BCseynzad%C9%99-01bb13353?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-02a292ba.jpg",
+    profilePictureUrl: "",
     createdAt: "2025-11-25T07:19:42.347Z",
     category: "Tədqiqatçılıq, Elmi məqalə yazmaq və araşdırma aparmaq",
     firstName: "Günay"
@@ -1045,7 +1044,7 @@ export const students: Student[] = [
         name: "Hekayə, məqalə yazmaq"
       }
     ],
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-fa4d14d3.jpg",
+    profilePictureUrl: "",
     portfolioURL: "",
     category: "Tədqiqatçılıq, Elmi məqalə yazmaq və araşdırma aparmaq",
     talentScore: 82,
@@ -1263,7 +1262,7 @@ export const students: Student[] = [
     email: "sfrlseda@gmail.com",
     createdAt: "2025-11-24T07:50:51.638Z",
     educationForm: "Əyani",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-1818faf3.jpg",
+    profilePictureUrl: "",
     youtubeURL: "",
     behanceURL: "",
     linkedInURL: "",
@@ -1411,7 +1410,7 @@ export const students: Student[] = [
     role: "student",
     faculty: "Tarix-filologiya fakültəsi",
     linkedInURL: "",
-    profilePictureUrl: "https://istedadmerkezi.net/api/sekiller/profile-12342ce4.jpg",
+    profilePictureUrl: "",
     projectIds: [],
     lastName: "Hüseynzadə",
     portfolioURL: "",
@@ -1491,7 +1490,7 @@ export const students: Student[] = [
     skills: [
       {
         level: "İrəli",
-        name: "Fortepiano'da ifa etmək"
+        name: "Fortepiano\'da ifa etmək"
       },
       {
         name: "Səhnədə çıxış etmək, obraz yaratmaq, ifadəli və emosional danışmaq",
@@ -1933,7 +1932,7 @@ export const certificates: Certificate[] = [
   {
     id: "0hs5h5bioymoaDpyP1vi",
     name: "İDEA Education Center MMC'nin nəzdində fəaliyyət göstərən GeniusMind Academy'nin 26.05.2025-ci il tarixində təşkil etdiyi \"Yaşadığımız hekayələrdən aldığımız qorxulara necə qalib gəlməli?\" adlı təlimində iştirak etdiyi üçün təqdim olunur!",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/69450c92-1b5a-4380-8caf-b0e5f84420f9-4a5a25ef.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet"
   },
@@ -1941,13 +1940,13 @@ export const certificates: Certificate[] = [
     id: "7MSoNnZ3cXY4G5NXU4y6",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/ddb8eb5e-eabf-4745-bb74-8f1463c8d96f-99e4e787.jpeg",
+    certificateURL: "",
     name: "13 May “Şəxsiyyətin Təməli : Uşaqda Disiplin, Məsuliyyət və Empatiya \" mövzusu əsasında keçirilən təlimdə iştirakı üçün təltif edilir."
   },
   {
     id: "9ZwJTmHfg6jAMs43Oqdm",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/c0611b94-b185-4af8-baee-7bbea7df8b5f-57eabd7f.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     name: "İDEA EDUCATION CENTER MMC-nin nəzdində fəaliyyət göstərən \"Solvita Academy\" tərəfindən təşkil olunan \"Ailədə sağlam ünsiyyətin sirləri \" adlı rəsmi təlimdə fəal iştirakına görə təltif olunur."
   },
@@ -1956,11 +1955,11 @@ export const certificates: Certificate[] = [
     name: "KDT MMC NƏZDİNDƏ OLAN MASTERMIND ACADEMY TƏRƏFİNDƏN KEÇİRİLƏN \" BAŞQALARININ FİKRİNDƏN AZAD YAŞAMAQ MÜMKÜNDÜRMÜ?\" TƏLİMİNDƏ FƏAL İŞTİRAK ETDİYİNİZ ÜÇÜN TƏŞƏKKÜR EDİRİK.",
     level: "Universitet",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/b6a34c70-3e63-4e47-840a-412db949c6a7-11ef27d1.jpeg"
+    certificateURL: ""
   },
   {
     id: "CK4Ui0woeO3vcysTw5oa",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/26479326-ed5c-4d42-9bc0-386a57dfcb4e-68526192.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet",
     name: "28 May\" Amiqdala Effektləri və Zehni Xətalar. Şürurlu Qərarların Açarları\" mövzusu əsasında keçirilən tədbirdə iştirakına görə təltif edilir."
@@ -1969,7 +1968,7 @@ export const certificates: Certificate[] = [
     id: "DCfmae7hIKJNQMFaiI2w",
     name: "ADA \"Adventure Development Academy\" MMC nəzdində fəaliyyət göstərən \"Grand Academy” təşkilatçılığı ilə 15.07.2025-25.07.2025 tarixində keçirilən \"Daxilimdəki mən\" adlı marafonun “Ən yaxşı sən versiyası” təlimində aktiv iştirakına görə verilir.",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/c7aaf7d9-e2d2-4c88-8d59-10a53ed9c71e-ab36be04.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9"
   },
   {
@@ -1977,18 +1976,18 @@ export const certificates: Certificate[] = [
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     name: "KDT MMC nəzdində olan \"MASTERMİND ACADEMY\" tərəfindən peşəkarlığı, yaradıcıllığı və daim zövqlə hazırladığı dizaynlarla komandanın inkişafına verdiyi töhfələrə görə TELLİ HƏSƏNOVA təltif olunur.",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/56eb7833-5816-4257-a0fd-58d60cd89423-88bb1d03.jpeg"
+    certificateURL: ""
   },
   {
     id: "ORTSZDPHXFqSlhJvai6x",
     level: "Universitet",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/7c770e31-6e24-4fce-8c21-11b2aa7cba37-f7963ab5.jpeg",
+    certificateURL: "",
     name: "İDEA EDUCATION CENTER MMC-nin nəzdində fəaliyyət göstərən SOLVITA ACADEMY-də fəal iştirakına görə təltif olunur."
   },
   {
     id: "OStTkfkLn4vLnjvubjd5",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/68dd5cd7-3bca-42db-85a2-123d446635bf-f82405a5.jpeg",
+    certificateURL: "",
     name: "İDEA EDUCATION CENTER MMC-nin nəzdində fəaliyyət göstərən \"Solvita Academy\" tərəfindən təşkil olunan \"Ailədə sağlam ünsiyyətin sirləri \" adlı rəsmi təlimdə fəal iştirakına görə təltif olunur",
     level: "Universitet",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9"
@@ -1997,19 +1996,19 @@ export const certificates: Certificate[] = [
     id: "WRUA9GlAUDnk3qjVGZeb",
     name: "KDT MMC-nin nəzdində fəaliyyət göstərən “MASTERMİND Academy” də göstərdiyi yüksək fəallıq, məsuliyyət və təşəbbüskarlıq nümunəsinə görə təltif olunur.",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/white-and-gold-elegant-certificate-of-achievement-eda92893.png",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9"
   },
   {
     id: "Y0WgDpHPZ4H9X6mE4If8",
     name: "İDEA Education Center MMC\'nin nəzdində fəaliyyət göstərən Genius Mind Academy\'nin təlimlərində aktiv iştirak etdiyi üçün təqdim olunur!",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/7d11ae8c-9b50-43cf-9203-167dcf9faa0c-a613a49a.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet"
   },
   {
     id: "ZWeFq4wjb1YMva9jskF0",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_2282-219758dd.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     name: "Ona görə ki, Netmerge (Diamond Academy) təlim mərkəzinin təşkil etdiyi \"Excel\" təlim proqramını uğurla başa vurmuşdur.",
     level: "Universitet"
@@ -2017,20 +2016,20 @@ export const certificates: Certificate[] = [
   {
     id: "b2niqhdrxotdATICX8kt",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/sertifkat-c1d4208d.png",
+    certificateURL: "",
     level: "Universitet",
     name: "11 İyun 2025-ci il tarixində KDT MMC-nin nəzdində fəaliyyət göstərən \"MASTERMİND Academy\" tərəfindən təşkil olunan \"Mental Arifmetika nədir? \" adlı təlimdə fəal iştirakına görə təltif olunur."
   },
   {
     id: "bbNmcqL7SYS6vEwx9daN",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/f14b75d2-f403-4896-828b-e0663d29c430-c0daffa6.jpeg",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     name: "27 May \" Beyin və Zəka Oyunları, Yaddaş Texnikalarının İncəlikləri \" mövzusu əsasında keçirilən təlimdə iştirakına görə təltif edilir.",
     level: "Universitet"
   },
   {
     id: "puZDF5hzUrnLpvRZUZeg",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/87d76a6a-9926-44b9-8ab6-3390bfc16241-5a17b6d1.jpeg",
+    certificateURL: "",
     name: "24 May\" Tədris Prosesində Müəllim və Şagird Münasibətində Strategiyalardan Düzgün İstifadə\" mövzusu əsasında keçirilən tədbirdə iştirakına görə təltif edilir.",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet"
@@ -2040,18 +2039,18 @@ export const certificates: Certificate[] = [
     name: "İDEA EDUCATION CENTER MMC-nin nəzdində fəaliyyət \"SOLVITA ACADEMY\" tərəfindən təşkil olunan \'En kötü anlarda en iyi dönüşüm\' adlı rəsmi təlimdə fəal iştirakına görə təltif olunur.",
     level: "Universitet",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/72429adc-4f88-4723-b86d-6f3dc0bb5b5d-f9730e57.jpeg"
+    certificateURL: ""
   },
   {
     id: "r8VyK1p9aNH166E09DT5",
     name: "17 May \"Qədim Türk Yazılı Abidələrinin dili\" mövzusu əsasında keçirilən təlimdə iştirakı üçün təltif edilir.",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_1939-6379d983.png"
+    certificateURL: ""
   },
   {
     id: "rMg2S1mQxOVgZ6kgTqLm",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/76199840-59d6-4b0d-817d-2934a1d11f6d-1330df16.jpeg",
+    certificateURL: "",
     level: "Universitet",
     name: "23.05.2025 tarixində EL-AZİZ Təlim Mərkəzinə dəstək olduğu ücün təltif olunur.",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9"
@@ -2060,19 +2059,19 @@ export const certificates: Certificate[] = [
     id: "rdM72ozKGB64xoESVzaV",
     name: "26 May 2025-ci il tarixində ADVENTURE DEVELOPMENT ACADEMY MMC-nin nəzdində fəaliyyət göstərən Dəniz Psixologiya Mərkəzi-nin təşkil etdiyi Mükəmməl Olmaq yoxsa Yetərincə Yaxşı Olmaq? adlı təlimin təşkilinə edilən yardım üçün təltif edilir!",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/b80fc895-29ae-48b1-8702-f05521da3a3e-636f6ba5.jpeg",
+    certificateURL: "",
     level: "Universitet"
   },
   {
     id: "vFgHWGBbAId4orW5X6Xl",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/white-and-gold-elegant-certificate-of-achievement-023860cc.png",
+    certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet",
     name: "11 İyun 2025-ci il tarixində KDT MMC-nin nəzdində fəaliyyət göstərən “MASTERMIND Academy” tərəfindən təşkil olunan “Mental Arifmetika nədir?\" adlı təlimdə fəal iştirakına görə təltif olunur."
   },
   {
     id: "yEtV15yEqAiyxzXA9Z4Z",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_0091-92edcf9e.jpeg",
+    certificateURL: "",
     level: "Universitet",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     name: "10 May “ Müəllimə Qarşı Davranış Mədəniyyəti \" mövzusu əsasında keçirilən təlimdə iştirakı üçün təltif edilir."
@@ -2080,27 +2079,27 @@ export const certificates: Certificate[] = [
   {
     id: "yphufFuagU7Nfh0PDXNc",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/9a20dc32-7f10-48a1-864d-2af52c3c3bcc-6d80b2db.jpeg",
+    certificateURL: "",
     name: "KDT MMC NƏZDİNDƏ FƏALİYYƏT GÖSTƏRƏN MASTERMIND ACADEMY TƏRƏFİNDƏN 08.07.2025. KEÇİRİLƏN\"0-DAN,1-Ə QƏDƏR PROQRAMLAŞDIRMA(İT)\" TƏLİMİNDƏ FƏAL İŞTİRAKINIZA GÖRƏ TƏŞƏKKÜR EDİRİK!",
     level: "Universitet"
   },
   {
     id: "1K6owYAxHIOfHJuBHqBR",
     level: "Respublika",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250821-wa0119-bfe0eb85.jpg",
+    certificateURL: "",
     name: "Məktəbəqədər təhsildə uşaq fəaliyyətinin təşkili və planlaşdırması",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
   },
   {
     id: "3spgc7r1UaAb2mho01Ft",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250809-wa0162-4e623d7a.jpg",
+    certificateURL: "",
     level: "Universitet",
     name: "English Learning Methods",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
   },
   {
     id: "5NigG7d9XhZj4gAbKZ8j",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250801-wa0111-56985f5c.jpg",
+    certificateURL: "",
     name: "Effektiv qərarvermə bacarığının formalaşması",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet"
@@ -2110,20 +2109,20 @@ export const certificates: Certificate[] = [
     level: "Universitet",
     name: "Beynəlxalq Proqramlı Yazıçılıq kursu",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250909-wa0073-ed36811e.jpg"
+    certificateURL: ""
   },
   {
     id: "8tMlAzFUwJruL73BY4Dy",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "Şüuraltı zəifləmədə doğru bilinən səhvlər",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250726-wa0296-be7cff56.jpg"
+    certificateURL: ""
   },
   {
     id: "B14gAOqlr7MFXhQOnUSt",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "Dərsə hazırlıq və idarəetmə",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250731-wa0265-6d8e180f.jpg",
+    certificateURL: "",
     level: "Universitet"
   },
   {
@@ -2131,26 +2130,26 @@ export const certificates: Certificate[] = [
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "Uşaq ədəbiyyatı - Bu günün tələbi",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250607-wa0193-47afda6e.jpg"
+    certificateURL: ""
   },
   {
     id: "HweBGyiwtK3PsD4QsL0w",
     level: "Respublika",
     name: "Beynəlxalq Proqramlı Yazıçılıq kursu",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250909-wa0074-3adb2d2a.jpg"
+    certificateURL: ""
   },
   {
     id: "IdHbgaqN3mofsb4qoGR0",
     name: "İdeal nitq ",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250825-wa0023-518c5ce6.jpg",
+    certificateURL: "",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet"
   },
   {
     id: "IoCRop3RsFPs7Smvi7Y0",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250803-wa0006-12541ba8.jpg",
+    certificateURL: "",
     name: "Uşaqlarda emosional zəka və hisslərin idarə olunması ",
     level: "Universitet"
   },
@@ -2159,39 +2158,39 @@ export const certificates: Certificate[] = [
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "KİNG Education Company Məhdud məsuliyyətli cəmiyyəti",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250831-wa0040-342e6e82.jpg"
+    certificateURL: ""
   },
   {
     id: "MYkHFKrwvX78gSilIAhq",
     level: "Universitet",
     name: "Burnout :Tükənmişlik sindiromu və mübarizə strategiyaları",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250918-wa0053-14fd2218.jpg"
+    certificateURL: ""
   },
   {
     id: "OGKdPhxlzcE6qmlbsG8K",
     name: "Atalar sözləri və Zərb məsəllərin poetik dili",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251003-wa0247-790c5342.jpg"
+    certificateURL: ""
   },
   {
     id: "RpmLV2Qj0jAWzAwjCYbB",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250813-wa0069-8c6f4d7b.jpg",
+    certificateURL: "",
     level: "Universitet",
     name: "Dövlət vergisi və sahibkarlıq"
   },
   {
     id: "TAc1NMA2bLNBJ6t61pi4",
     name: "Exsel təlim proqramı",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/screenshot_20250601_165643_cn_wps_moffice_eng_pdfreader2_edit_1014155099492985-3106bfe7.jpg",
+    certificateURL: "",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
   },
   {
     id: "VpLcmdOA56OQGXxHvDP3",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250801-wa0006-0d6e4be2.jpg",
+    certificateURL: "",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "KİNG EDUCATİON COMPANY MMC KÖNÜLLÜ "
@@ -2201,11 +2200,11 @@ export const certificates: Certificate[] = [
     name: "Müəllim Missiyası və Milli Dəyərlər",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/screenshot_20251124_200948_com_whatsapp_mediaviewactivity_edit_354473157377048-d81bf786.jpg"
+    certificateURL: ""
   },
   {
     id: "bwIH72nX5eexHnad17RD",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250919-wa0160-90a5bae2.jpg",
+    certificateURL: "",
     level: "Universitet",
     name: "Milli kimliyin səsi və sözü :Bəxtiyar Vahabzadə poeziyası ilə Hacıbəyov musiqisinin kəsişməsi",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
@@ -2215,25 +2214,25 @@ export const certificates: Certificate[] = [
     name: "Kitab oxumaq mütaliə etmək bilik və dünyagörüşün inkişafı",
     level: "Universitet",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250615-wa0040-aa2779c8.jpg"
+    certificateURL: ""
   },
   {
     id: "hHBfTS0ykhNyRvGv7XD3",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/screenshot_20251124_200946_com_whatsapp_mediaviewactivity_edit_354483409854510-21343190.jpg",
+    certificateURL: "",
     name: "Zəfər gününün mənəvi dəyəri və tarixi əhəmiyyəti"
   },
   {
     id: "i9iPdjqr35kxE3dysjEV",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250810-wa0002-dffd4b49.jpg",
+    certificateURL: "",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     name: "“Mən kiməm? ” və nə istədiyimi necə biləcəyəm?"
   },
   {
     id: "iTbfQJio34m67tFwjPK4",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250906-wa0151-3979b0f1.jpg",
+    certificateURL: "",
     name: "Yazmaq sənəti :Qızıl düsturlar",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet"
@@ -2242,7 +2241,7 @@ export const certificates: Certificate[] = [
     id: "offIyexkSWQWDnxgJdDt",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250816-wa0289-0b4cde25.jpg",
+    certificateURL: "",
     name: "Effektiv nitq"
   },
   {
@@ -2250,25 +2249,25 @@ export const certificates: Certificate[] = [
     name: "“Mən kiməm? ” və nə istədiyimi necə biləcəyəm?",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250810-wa0002-71f380d5.jpg"
+    certificateURL: ""
   },
   {
     id: "pyovoetJVfsndTL6YNF8",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250603-wa0080-4c4d1b96.jpg",
+    certificateURL: "",
     name: "Karyerada ingilis dilinin rolu"
   },
   {
     id: "rr2MxKccI6gHgEBgslsE",
     name: "Azərbaycan dili və ədəbiyyatın həyatımızdakı rolu ",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250727-wa0308-2c3b3d10.jpg",
+    certificateURL: "",
     level: "Respublika",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
   },
   {
     id: "wSZwy77Lqnw9qOAANyfB",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250909-wa0072-d35414eb.jpg",
+    certificateURL: "",
     level: "Universitet",
     name: "Mederatorluq",
     studentId: "4e2ed7eb-4746-4ee8-8460-eb8d11b09c69"
@@ -2276,13 +2275,13 @@ export const certificates: Certificate[] = [
   {
     id: "1TW1zNXKzc8DcT6kmmbm",
     level: "Beynəlxalq",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/eyyubibrahimli-ensa-temmuz-ka-certificate-f37dbab7.pdf",
+    certificateURL: "",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
     name: "CCNAv7: Enterprise Networking, Security, and Automation"
   },
   {
     id: "CTC5nUhuOZ6nyaCZgd3A",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/certificate-e5f958ad.jpg",
+    certificateURL: "",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
     level: "Beynəlxalq",
     name: "CYBER THREAT INTELLIGENCE 101"
@@ -2292,47 +2291,47 @@ export const certificates: Certificate[] = [
     level: "Beynəlxalq",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
     name: "Cisco Siber Güvenliğe Giriş",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/eyyubibrahimli-introduction-to-certificate-e92e62de.pdf"
+    certificateURL: ""
   },
   {
     id: "L3rciFdX8FyAGxSA0PXb",
     name: "Cisco IT Essentials",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
     level: "Beynəlxalq",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/cisco-certificate-4019cbd0.pdf"
+    certificateURL: ""
   },
   {
     id: "L9OGTZJznOVhd6kLyyQY",
     level: "Beynəlxalq",
     name: "CCNAv7: Introduction to Networks",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/eyyubibrahimli-introduction-to-certificate-1-f10e6269.pdf"
+    certificateURL: ""
   },
   {
     id: "aFDiplRxQKsCZ1NR23hx",
     name: "NDG Linux Unhatched",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
     level: "Beynəlxalq",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/eyyubibrahimli-2024-gdscutaa-ts-certificate-2dbfe38e.pdf"
+    certificateURL: ""
   },
   {
     id: "g2wuyCOoaxsWYCXoGyUF",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/eyyubibrahimli-ccna-2-temmuz-certificate-d832db1e.pdf",
+    certificateURL: "",
     name: "CCNAv7: Switching, Routing, and Wireless Essentials",
     level: "Beynəlxalq"
   },
   {
     id: "uDTDKyrhwbB8vdZadNz2",
     name: "Cisco Ethical Hacker",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/ethical_hacker_badge20240621-8-99blmp-4265c6e0.pdf",
+    certificateURL: "",
     level: "Beynəlxalq",
     studentId: "58226ea5-90b4-4278-b57f-9cded7ee0384"
   },
   {
     id: "TVFKOQMTo0UjuKJ1Db29",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/whatsapp-image-2025-11-26-at-155655-f3fb3f20.jpeg",
+    certificateURL: "",
     studentId: "582820c1-4734-42a5-81b7-2a3de2ddd158",
     name: "salam"
   },
@@ -2341,32 +2340,32 @@ export const certificates: Certificate[] = [
     name: "IDEA Education Center MMC",
     studentId: "6580b7ce-23b6-4bdc-a169-035501acb3a6",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/7a9ed3cc-c491-4032-8d2b-49d5ff5269f7-3315b597.jpeg"
+    certificateURL: ""
   },
   {
     id: "JQ9VvPgUDZc9BvWZDtyp",
     level: "Respublika",
     studentId: "6580b7ce-23b6-4bdc-a169-035501acb3a6",
     name: "Təkamül Akademiya MMC",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/d867cf16-5dd0-4946-9c6d-5368bbef8595-9f3043f7.jpeg"
+    certificateURL: ""
   },
   {
     id: "MXnpiSvGKsTV81dkpj7R",
     studentId: "6580b7ce-23b6-4bdc-a169-035501acb3a6",
     level: "Universitet",
     name: "Effective methods for learning a foreign language",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_5780-23ae4ea5.jpeg"
+    certificateURL: ""
   },
   {
     id: "Q1YNCrzvm6vBfQWF3Xd3",
     name: "Tələbə Elm Cəmiyyəti konfransı",
     studentId: "6580b7ce-23b6-4bdc-a169-035501acb3a6",
     level: "Regional",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_5781-aedb92d7.jpeg"
+    certificateURL: ""
   },
   {
     id: "4Mt9corzeAmUkctYn32o",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_6039-6d023c47.jpeg",
+    certificateURL: "",
     name: "Mental Well-being 101: Tibb tələbələri üçün Psixi sağlamlıq",
     studentId: "81f7f1b4-0cc8-4ad2-9798-b28dfcbf9d9a",
     level: "Universitet"
@@ -2375,19 +2374,19 @@ export const certificates: Certificate[] = [
     id: "JYQ1raB8AQJHGM6BvOXw",
     studentId: "81f7f1b4-0cc8-4ad2-9798-b28dfcbf9d9a",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/f82b8c63-3b14-44ef-83ce-f1594e96c061-0ad1b48a.jpeg",
+    certificateURL: "",
     name: "Elmmetrik bazalara qeydiyyat"
   },
   {
     id: "MQCB9wTGiCbKfVvzjqBN",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_6034-be92fe95.jpeg",
+    certificateURL: "",
     studentId: "81f7f1b4-0cc8-4ad2-9798-b28dfcbf9d9a",
     level: "Respublika",
     name: "3rd İnternational Azerbaijan Laboratory Medicine Congress &Lab Expo “Blood Culture Course”"
   },
   {
     id: "NI1rnEUerTT9NuttZdBi",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_6037-51018546.jpeg",
+    certificateURL: "",
     studentId: "81f7f1b4-0cc8-4ad2-9798-b28dfcbf9d9a",
     level: "Universitet",
     name: "Nevropsixoloji farmakologiyada yeni müalicə üsulları"
@@ -2396,19 +2395,19 @@ export const certificates: Certificate[] = [
     id: "moxOSXaZyNb06jjfHjD3",
     name: "New professional horizons: Becoming a Physician in the United States ",
     level: "Universitet",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img_6038-abfcf024.jpeg",
+    certificateURL: "",
     studentId: "81f7f1b4-0cc8-4ad2-9798-b28dfcbf9d9a"
   },
   {
     id: "FsXmv2tCgyuWxIiAaiRW",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0164-054fac4a.jpg",
+    certificateURL: "",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Azərbaycan dili və Ədəbiyyatın həyatımızda rolu",
     level: "Universitet"
   },
   {
     id: "G8FWWSQXuBjw7q7rfJGL",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0160-efc57b8e.jpg",
+    certificateURL: "",
     level: "Respublika",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Danışan zehin: Düşüncə Tərzimizin Nitqə Təsiri"
@@ -2418,13 +2417,13 @@ export const certificates: Certificate[] = [
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     level: "Universitet",
     name: "Səlis Nitqin Resepti",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0163-ee82be69.jpg"
+    certificateURL: ""
   },
   {
     id: "KWfDe6CpDtRJTzfG9jMf",
     level: "Respublika",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0165-a8a1d21f.jpg",
+    certificateURL: "",
     name: "\"Elmi İnkişaf: Uğurlar və Çağırışlar\" Gənc Tədqiqatçıların II Respublika Elmi Konfransı"
   },
   {
@@ -2432,25 +2431,25 @@ export const certificates: Certificate[] = [
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Milli Kimliyin Səsi və Sözü: Vahabzadə Poeziyası ilə Hacıbəyov Musiqisinin Kəsişməsi",
     level: "Beynəlxalq",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0157-fffb138e.jpg"
+    certificateURL: ""
   },
   {
     id: "hYMsKUPE1F9w9p8FmTI0",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Ünsiyyətdə Uğurun Sirləri: Nitq və ifadə Bacarıqları",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0161-e4b4cb08.jpg",
+    certificateURL: "",
     level: "Universitet"
   },
   {
     id: "hu8i01SEQE2dIUaP29Nm",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "NAXÇIVAN MUXTAR RESPUBLİKASINDA QIZLARIN DAVAMLI İNKİŞAFI və iQLiM SAVADLILIĞI: GƏLƏCƏK NƏSiL ÜÇÜN BACARIQLARIN İNKiŞAFI",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250716-wa0137-1211f301.jpg",
+    certificateURL: "",
     level: "Universitet"
   },
   {
     id: "kkav8DoDz2k9eZw7xX9e",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20250716-wa0138-e7a1d7c4.jpg",
+    certificateURL: "",
     level: "Universitet",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Poeziyanın Bəxtiyar zirvəsi"
@@ -2460,21 +2459,21 @@ export const certificates: Certificate[] = [
     level: "Beynəlxalq",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
     name: "Atalar Sözləri və Zərb Məsələlərin Poetik Dili",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0155-cc887a59.jpg"
+    certificateURL: ""
   },
   {
     id: "qMK1jJRKCYO1PjAFAhp1",
     name: "7st INTERNATIONAL TRAKYA SCIENTIFIC RESEARCH CONGRESS",
     level: "Universitet",
     studentId: "8c271b08-dc19-4b30-a00d-f67d65cece7b",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/img-20251124-wa0159-39a3ecc3.jpg"
+    certificateURL: ""
   },
   {
     id: "AnFIWIyHcePk3WBy7B1O",
     studentId: "b25df151-810d-450a-aea4-8351404de311",
     level: "Universitet",
     name: "“Elevate 101: Project Managment Forum”",
-    certificateURL: "https://istedadmerkezi.net/api/senedler/jale-sahsuvarova-75a33d4b.png"
+    certificateURL: ""
   }
 ];
 
