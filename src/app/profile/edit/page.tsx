@@ -36,11 +36,11 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription
 } from '@/components/ui/form';
 import {
   Select,
@@ -173,7 +173,6 @@ function EditProfilePageComponent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // States for profile picture editor
   const [editorOpen, setEditorOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.2);
@@ -430,7 +429,7 @@ function EditProfilePageComponent() {
     if (!targetUser || !userDocRef) return;
     setIsSaving(true);
     
-    let finalProfilePicUrl = localProfilePicUrl;
+    let finalProfilePicUrl = targetUser.profilePictureUrl;
 
     if (newProfilePicBlob) {
         const uploadedUrl = await handleFileUpload(newProfilePicBlob, 'sekil');
@@ -444,7 +443,7 @@ function EditProfilePageComponent() {
 
     const payload = {
       ...data,
-      profilePictureUrl: finalProfilePicUrl || '',
+      profilePictureUrl: finalProfilePicUrl,
       gpa: Number(data.gpa) || 0,
     };
 
@@ -676,7 +675,7 @@ function EditProfilePageComponent() {
               Ləğv et
             </Button>
             <Button onClick={handleSaveCroppedImage} disabled={isUploading}>
-              {isUploading ? 'Yadda saxlanılır...' : 'Təsdiqlə'}
+              {isUploading ? 'Yüklənir...' : 'Təsdiqlə'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -710,119 +709,15 @@ function EditProfilePageComponent() {
                   onSubmit={profileForm.handleSubmit(onProfileSubmit)}
                   className="space-y-6"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left Column */}
-                    <div className="space-y-6">
-                      <FormField
-                        name="firstName"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Ad</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="lastName"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Soyad</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="major"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>İxtisas</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        name="courseYear"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Təhsil ili</FormLabel>
-                            <Select
-                              onValueChange={(value) =>
-                                field.onChange(parseInt(value, 10))
-                              }
-                              value={String(field.value)}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Təhsil ilini seçin" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {[1, 2, 3, 4, 5, 6].map((y) => (
-                                  <SelectItem key={y} value={String(y)}>
-                                    {y}-ci kurs
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        name="educationForm"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Təhsil Forması (Könüllü)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Əyani / Qiyabi" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="gpa"
-                        control={profileForm.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Keçən ilki ÜOMG (Könüllü)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.1"
-                                {...field}
-                                value={field.value ?? ''}
-                                placeholder="Məs: 85.5"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-6">
-                        <FormItem>
-                          <FormLabel>Profil Şəkli</FormLabel>
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-24 w-24">
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-8">
+                    {/* Left Column - Avatar */}
+                    <div className="flex flex-col items-center">
+                       <FormItem>
+                          <FormLabel className="text-center block mb-2">Profil Şəkli</FormLabel>
+                            <Avatar className="h-32 w-32">
                               <AvatarImage
-                                src={localProfilePicUrl || targetUser.profilePictureUrl}
+                                src={localProfilePicUrl || undefined}
+                                alt={targetUser.firstName}
                               />
                               <AvatarFallback>
                                 {getInitials(
@@ -834,13 +729,14 @@ function EditProfilePageComponent() {
                             <Button
                               type="button"
                               variant="outline"
+                              className="mt-4"
                               onClick={() =>
                                 profilePictureInputRef.current?.click()
                               }
                               disabled={isUploading}
                             >
                               <Upload className="mr-2 h-4 w-4" />
-                              {isUploading ? 'Yüklənir...' : 'Şəkil Dəyiş'}
+                              {isUploading ? 'Yüklənir...' : 'Dəyiş'}
                             </Button>
                             <Input
                               ref={profilePictureInputRef}
@@ -849,54 +745,108 @@ function EditProfilePageComponent() {
                               accept="image/*"
                               onChange={onProfilePictureChange}
                             />
-                          </div>
                         </FormItem>
+                    </div>
 
-                        <FormField
-                            name="linkedInURL"
+                    {/* Right Column - Fields */}
+                    <div className="space-y-4">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormField
+                            name="firstName"
                             control={profileForm.control}
                             render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>LinkedIn URL</FormLabel>
+                              <FormItem>
+                                <FormLabel>Ad</FormLabel>
                                 <FormControl>
-                                <Input placeholder="https://linkedin.com/in/..." {...field} />
+                                  <Input {...field} />
                                 </FormControl>
                                 <FormMessage />
-                            </FormItem>
+                              </FormItem>
                             )}
-                        />
-                         <FormField
-                            name="githubURL"
+                          />
+                          <FormField
+                            name="lastName"
                             control={profileForm.control}
                             render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>GitHub URL</FormLabel>
+                              <FormItem>
+                                <FormLabel>Soyad</FormLabel>
                                 <FormControl>
-                                <Input placeholder="https://github.com/..." {...field} />
+                                  <Input {...field} />
                                 </FormControl>
                                 <FormMessage />
-                            </FormItem>
+                              </FormItem>
                             )}
+                          />
+                       </div>
+                       <FormField
+                          name="major"
+                          control={profileForm.control}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>İxtisas</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                        <FormField
-                            name="portfolioURL"
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormField
+                            name="courseYear"
                             control={profileForm.control}
                             render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Portfolio URL</FormLabel>
+                              <FormItem>
+                                <FormLabel>Təhsil ili</FormLabel>
+                                <Select
+                                  onValueChange={(value) =>
+                                    field.onChange(parseInt(value, 10))
+                                  }
+                                  value={String(field.value)}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Təhsil ilini seçin" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {[1, 2, 3, 4, 5, 6].map((y) => (
+                                      <SelectItem key={y} value={String(y)}>
+                                        {y}-ci kurs
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            name="gpa"
+                            control={profileForm.control}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ÜOMG (Könüllü)</FormLabel>
                                 <FormControl>
-                                <Input placeholder="https://sizin-saytiniz.com" {...field} />
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    placeholder="Məs: 85.5"
+                                  />
                                 </FormControl>
                                 <FormMessage />
-                            </FormItem>
+                              </FormItem>
                             )}
-                        />
+                          />
+                       </div>
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
-                   <FormField
+
+                  <FormField
                     name="skills"
                     control={profileForm.control}
                     render={() => (
@@ -975,12 +925,18 @@ function EditProfilePageComponent() {
                   />
 
                   <Separator />
+
                   <FormField
                     control={profileForm.control}
                     name="successStory"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-lg font-medium">Uğur Hekayəsi (Könüllü)</FormLabel>
+                        <FormLabel className="text-lg font-medium">
+                            Uğur Hekayəsi (Könüllü)
+                            <span className="block text-xs font-normal text-muted-foreground mt-1">
+                                Bu hekayə ana səhifədə nümayiş etdirilə bilər.
+                            </span>
+                        </FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..."
@@ -988,13 +944,67 @@ function EditProfilePageComponent() {
                             {...field}
                           />
                         </FormControl>
-                         <FormDescription>
-                            Bu hekayə ana səhifədə nümayiş oluna bilər.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  <Separator />
+                  <h3 className="text-lg font-medium">Sosial Linklər</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        name="linkedInURL"
+                        control={profileForm.control}
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>LinkedIn URL</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://linkedin.com/in/..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        name="githubURL"
+                        control={profileForm.control}
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>GitHub URL</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://github.com/..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        name="portfolioURL"
+                        control={profileForm.control}
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Portfolio URL</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://sizin-saytiniz.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        name="behanceURL"
+                        control={profileForm.control}
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Behance URL</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://behance.net/..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
 
                   <div className="pt-4 flex justify-end">
                     <Button type="submit" disabled={isSaving || isUploading}>
@@ -1402,9 +1412,9 @@ function EditProfilePageComponent() {
                         disabled={isUploading}
                       />
                     </FormControl>
-                     <FormDescription>
+                     <p className="text-sm text-muted-foreground pt-1">
                         Fayl yükləyə və ya aşağıdakı xanaya link daxil edə bilərsiniz.
-                     </FormDescription>
+                     </p>
                   </FormItem>
                    <FormField
                     name="certificateURL"
@@ -1490,7 +1500,7 @@ function EditProfilePageComponent() {
                               Silməni təsdiq edirsiniz?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              Bu əməliyyat geri qaytarılmazdır. "{c.name}" adlı
+                              Bu əməliyyat geri qaytarıla bilməz. "{c.name}" adlı
                               sertifikat profilinizdən həmişəlik silinəcək.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
