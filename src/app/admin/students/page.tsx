@@ -52,26 +52,40 @@ import {
 import { Input } from "@/components/ui/input";
 import type { Student, StudentStatus, FacultyData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { students as allStudents, faculties as allFaculties } from "@/lib/placeholder-data";
+import { useCollectionOptimized, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from 'firebase/firestore';
+import { faculties as allFaculties } from '@/lib/placeholder-data';
+
 
 export default function AdminStudentsPage() {
   const { toast } = useToast();
-  
-  const [students, setStudents] = useState<Student[]>(allStudents);
-  const [faculties] = useState<FacultyData[]>(allFaculties);
+  const firestore = useFirestore();
 
   const [activeTab, setActiveTab] = useState<StudentStatus | 'all'>('all');
   const [selectedFaculties, setSelectedFaculties] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const baseQuery = query(collection(firestore, 'users'), where('role', '==', 'student'));
+    if (activeTab === 'all') return baseQuery;
+    return query(baseQuery, where('status', '==', activeTab));
+  }, [firestore, activeTab]);
+
+  const { data: students, isLoading } = useCollectionOptimized<Student>(studentsQuery);
+  const [faculties] = useState<FacultyData[]>(allFaculties);
 
   const handleStatusChange = (studentId: string, newStatus: StudentStatus) => {
-    setStudents(prev => prev.map(s => s.id === studentId ? {...s, status: newStatus} : s));
+    if(!firestore) return;
+    const studentDocRef = doc(firestore, 'users', studentId);
+    updateDocumentNonBlocking(studentDocRef, { status: newStatus });
     toast({ title: "Status uğurla dəyişdirildi."});
   };
 
   const handleDeleteStudent = (studentId: string) => {
-    setStudents(prev => prev.filter(s => s.id !== studentId));
+     if(!firestore) return;
+    const studentDocRef = doc(firestore, 'users', studentId);
+    deleteDocumentNonBlocking(studentDocRef);
     toast({ title: "Tələbə uğurla silindi."});
   }
 
@@ -90,16 +104,15 @@ export default function AdminStudentsPage() {
     const filteredStudents = useMemo(() => {
         if (!students) return [];
         return students.filter(student => {
-            const statusMatch = activeTab === 'all' || student.status === activeTab;
             const facultyMatch = selectedFaculties.length === 0 || selectedFaculties.includes(student.faculty);
             const searchMatch = 
                 `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 student.email.toLowerCase().includes(searchTerm.toLowerCase());
-            return statusMatch && facultyMatch && searchMatch;
+            return facultyMatch && searchMatch;
         })
-    }, [students, activeTab, selectedFaculties, searchTerm]);
+    }, [students, selectedFaculties, searchTerm]);
 
-    if (isLoading) {
+    if (isLoading && !students) {
       return <div className="text-center py-10">Yüklənir...</div>
     }
 
@@ -199,7 +212,7 @@ export default function AdminStudentsPage() {
                               {student.talentScore || 'N/A'}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                              {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'}
+                              {student.createdAt?.toDate ? student.createdAt.toDate().toLocaleDateString() : (student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-')}
                           </TableCell>
                           <TableCell>
                               <DropdownMenu>

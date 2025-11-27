@@ -10,8 +10,9 @@ import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { news as allNews } from '@/lib/placeholder-data';
-import { adminUser } from '@/lib/placeholder-data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 function NewsDetailsLoading() {
     return (
@@ -35,25 +36,18 @@ function NewsDetailsLoading() {
 
 export default function NewsDetailsPage() {
     const { slug } = useParams();
+    const firestore = useFirestore();
     const newsSlug = typeof slug === 'string' ? slug : '';
 
-    const [newsItem, setNewsItem] = useState<News | undefined>();
-    const [author, setAuthor] = useState<Admin | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const newsQuery = useMemoFirebase(() => 
+        firestore && newsSlug ? query(collection(firestore, 'news'), where('slug', '==', newsSlug)) : null,
+        [firestore, newsSlug]
+    );
+
+    const { data: newsItems, isLoading } = useCollection<News>(newsQuery);
+    const newsItem = newsItems?.[0];
+
     const [sanitizedContent, setSanitizedContent] = useState('');
-
-    useEffect(() => {
-        if (newsSlug) {
-            const foundNews = allNews.find(n => n.slug === newsSlug);
-            setNewsItem(foundNews);
-
-            if (foundNews?.authorId === adminUser.id) {
-                setAuthor(adminUser);
-            }
-            setIsLoading(false);
-        }
-    }, [newsSlug]);
-
 
     useEffect(() => {
         if (newsItem?.content && typeof window !== 'undefined') {
@@ -68,6 +62,8 @@ export default function NewsDetailsPage() {
     if (!newsItem) {
         return <div className="text-center py-20">Xəbər tapılmadı.</div>;
     }
+    
+    const createdAtDate = newsItem.createdAt?.toDate ? newsItem.createdAt.toDate() : new Date(newsItem.createdAt || 0);
 
     return (
         <article className="container mx-auto max-w-4xl py-8 md:py-12 px-4">
@@ -78,14 +74,14 @@ export default function NewsDetailsPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                           <AvatarFallback>{author ? `${author.firstName.charAt(0)}${author.lastName.charAt(0)}` : 'A'}</AvatarFallback>
+                           <AvatarFallback>A</AvatarFallback>
                         </Avatar>
-                        <span>{author ? `${author.firstName} ${author.lastName}` : newsItem.authorName}</span>
+                        <span>{newsItem.authorName}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <time dateTime={new Date(newsItem.createdAt).toISOString()}>
-                            {format(new Date(newsItem.createdAt), 'dd MMMM, yyyy')}
+                        <time dateTime={createdAtDate.toISOString()}>
+                            {format(createdAtDate, 'dd MMMM, yyyy')}
                         </time>
                     </div>
                 </div>

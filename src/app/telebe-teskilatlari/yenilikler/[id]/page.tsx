@@ -9,29 +9,51 @@ import DOMPurify from 'dompurify';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { studentOrgUpdates, studentOrganizations } from '@/lib/placeholder-data';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 
 export default function StudentOrgUpdateDetailsPage() {
     const { id } = useParams();
+    const firestore = useFirestore();
     const updateId = typeof id === 'string' ? id : '';
     
-    const [update, setUpdate] = useState<StudentOrgUpdate | undefined>();
-    const [organization, setOrganization] = useState<StudentOrganization | undefined>();
+    const [update, setUpdate] = useState<StudentOrgUpdate | null>(null);
+    const [organization, setOrganization] = useState<StudentOrganization | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [sanitizedContent, setSanitizedContent] = useState('');
 
     useEffect(() => {
-        if (updateId) {
-            const foundUpdate = studentOrgUpdates.find(u => u.id === updateId);
-            setUpdate(foundUpdate);
+        const fetchUpdateAndOrg = async () => {
+            if (!firestore || !updateId) return;
+            setIsLoading(true);
 
-            if (foundUpdate) {
-                const foundOrg = studentOrganizations.find(o => o.id === foundUpdate.organizationId);
-                setOrganization(foundOrg);
+            try {
+                // We don't know the organization ID from the URL, so we query the top-level collection
+                const updateDocRef = doc(firestore, 'student-org-updates', updateId);
+                const updateSnap = await getDoc(updateDocRef);
+
+                if (updateSnap.exists()) {
+                    const updateData = { id: updateSnap.id, ...updateSnap.data() } as StudentOrgUpdate;
+                    setUpdate(updateData);
+
+                    if (updateData.organizationId) {
+                        const orgDocRef = doc(firestore, 'users', updateData.organizationId);
+                        const orgSnap = await getDoc(orgDocRef);
+                        if (orgSnap.exists()) {
+                            setOrganization({ id: orgSnap.id, ...orgSnap.data() } as StudentOrganization);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching update or organization:", error);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
-        }
-    }, [updateId]);
+        };
+
+        fetchUpdateAndOrg();
+    }, [firestore, updateId]);
 
 
     useEffect(() => {
@@ -62,6 +84,7 @@ export default function StudentOrgUpdateDetailsPage() {
 
     const pageTitle = `${update.title} | ${organization.name}`;
     const description = update.content.replace(/<[^>]*>?/gm, '').substring(0, 155);
+    const createdAtDate = update.createdAt?.toDate ? update.createdAt.toDate() : new Date(update.createdAt || 0);
 
     return (
         <>
@@ -85,8 +108,8 @@ export default function StudentOrgUpdateDetailsPage() {
                         </Link>
                         <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <time dateTime={new Date(update.createdAt).toISOString()}>
-                                {format(new Date(update.createdAt), 'dd MMMM, yyyy')}
+                            <time dateTime={createdAtDate.toISOString()}>
+                                {format(createdAtDate, 'dd MMMM, yyyy')}
                             </time>
                         </div>
                     </div>

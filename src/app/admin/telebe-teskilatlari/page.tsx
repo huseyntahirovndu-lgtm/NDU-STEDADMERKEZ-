@@ -41,16 +41,21 @@ import {
 import type { StudentOrganization } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { studentOrganizations } from "@/lib/placeholder-data";
-import { useState } from "react";
+import { useCollectionOptimized, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from 'firebase/firestore';
 
 
 export default function AdminStudentOrgsPage() {
     const { toast } = useToast();
-    const [organizations, setOrganizations] = useState<StudentOrganization[]>(studentOrganizations);
+    const firestore = useFirestore();
+
+    const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization')) : null, [firestore]);
+    const { data: organizations, isLoading } = useCollectionOptimized<StudentOrganization>(orgsQuery);
+
 
     const handleDelete = (orgId: string) => {
-        setOrganizations(prev => prev.filter(org => org.id !== orgId));
+        if (!firestore) return;
+        deleteDocumentNonBlocking(doc(firestore, 'users', orgId));
         toast({ title: "Təşkilat uğurla silindi." });
     };
     
@@ -91,7 +96,11 @@ export default function AdminStudentOrgsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                     {organizations && organizations.length > 0 ? (
+                     {isLoading ? (
+                         <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">Yüklənir...</TableCell>
+                        </TableRow>
+                     ) : organizations && organizations.length > 0 ? (
                         organizations.map((org) => (
                         <TableRow key={org.id}>
                             <TableCell className="font-medium">{org.name}</TableCell>

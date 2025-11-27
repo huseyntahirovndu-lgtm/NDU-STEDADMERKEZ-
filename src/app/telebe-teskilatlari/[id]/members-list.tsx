@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { students as allStudents } from '@/lib/placeholder-data';
-import { useState, useEffect } from 'react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, documentId } from 'firebase/firestore';
+
 
 interface MembersListProps {
   organization: StudentOrganization;
@@ -16,17 +17,16 @@ interface MembersListProps {
 
 export default function MembersList({ organization }: MembersListProps) {
   const { user: currentUser } = useAuth();
-  const [members, setMembers] = useState<Student[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
 
-
-  useEffect(() => {
-    if (organization?.memberIds && organization.memberIds.length > 0) {
-      const orgMembers = allStudents.filter(s => organization.memberIds.includes(s.id));
-      setMembers(orgMembers);
-    }
-    setIsLoading(false);
-  }, [organization]);
+  const membersQuery = useMemoFirebase(
+    () => (firestore && organization?.memberIds && organization.memberIds.length > 0
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', organization.memberIds))
+        : null),
+    [firestore, organization?.memberIds]
+  );
+  
+  const { data: members, isLoading } = useCollection<Student>(membersQuery);
 
 
   return (

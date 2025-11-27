@@ -1,17 +1,19 @@
 'use client';
 import { StudentOrganization } from '@/types';
-import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Building } from 'lucide-react';
-import { studentOrganizations } from '@/lib/placeholder-data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 
 export default function StudentOrganizationsPage() {
-  const [orgs] = useState<StudentOrganization[]>(() => studentOrganizations.filter(org => org.status === 'təsdiqlənmiş'));
-  const [isLoading] = useState(false); // Mocking loading state
+  const firestore = useFirestore();
+  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization'), where('status', '==', 'təsdiqlənmiş')) : null, [firestore]);
+  const { data: orgs, isLoading } = useCollection<StudentOrganization>(orgsQuery);
+
 
   return (
     <div className="container mx-auto py-12 px-4">

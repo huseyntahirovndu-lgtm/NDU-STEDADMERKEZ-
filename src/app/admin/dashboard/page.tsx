@@ -26,44 +26,34 @@ import {
 import Link from "next/link";
 import { Student, StudentOrganization } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
-import { students as allStudents, studentOrganizations as allStudentOrgs } from "@/lib/placeholder-data";
-import { useState, useEffect, useTransition } from "react";
-import { syncDataAction } from "./action";
-import { useToast } from "@/hooks/use-toast";
-import { Textarea } from "@/components/ui/textarea";
+import { useCollectionOptimized, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useMemo } from 'react';
+
 
 export default function AdminDashboard() {
   const { user: adminUser, loading: adminLoading } = useAuth();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [studentOrgs, setStudentOrgs] = useState<StudentOrganization[]>([]);
-  const [recentStudents, setRecentStudents] = useState<Student[]>([]);
+  const firestore = useFirestore();
+
+  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null, [firestore]);
+  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'student-organization')) : null, [firestore]);
+
+  const { data: students, isLoading: studentsLoading } = useCollectionOptimized<Student>(studentsQuery);
+  const { data: studentOrgs, isLoading: orgsLoading } = useCollectionOptimized<StudentOrganization>(studentOrgsQuery);
+
+  const isLoading = adminLoading || studentsLoading || orgsLoading;
   
-  const [syncedData, setSyncedData] = useState<string | null>(null);
-  const [isSyncing, startSyncTransition] = useTransition();
-  const { toast } = useToast();
-
-  const isLoading = adminLoading;
-
-  useEffect(() => {
-    if (adminUser?.role === 'admin') {
-        setStudents(allStudents);
-        setStudentOrgs(allStudentOrgs);
-        const sortedStudents = [...allStudents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setRecentStudents(sortedStudents.slice(0, 5));
-    }
-  }, [adminUser]);
-
-  const handleSync = () => {
-    startSyncTransition(async () => {
-        const result = await syncDataAction();
-        if(result.success) {
-            setSyncedData(result.data);
-            toast({ title: "Sinxronizasiya Uğurlu Oldu", description: "Lokal məlumatlar üçün kod aşağıda göstərildi. Kopyalayıb placeholder-data.ts faylına yerləşdirin."})
-        } else {
-            toast({ variant: 'destructive', title: "Sinxronizasiya Xətası", description: result.error });
-        }
-    })
-  }
+  const recentStudents = useMemo(() => {
+    if (!students) return [];
+    return [...students].sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime();
+    }).slice(0, 5);
+  }, [students]);
+  
+  const totalStudents = students?.length || 0;
+  const totalStudentOrgs = studentOrgs?.length || 0;
 
   if (isLoading) {
     return (
@@ -76,13 +66,11 @@ export default function AdminDashboard() {
     );
   }
   
-  const totalStudents = students.length;
-  const totalStudentOrgs = studentOrgs.length;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -111,45 +99,10 @@ export default function AdminDashboard() {
               </p>
             </CardContent>
           </Card>
-           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center justify-between">
-                Sistem Sinxronizasiyası
-                 <RefreshCw className="h-4 w-4 text-muted-foreground" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-xs text-muted-foreground mb-2">
-                    Firebase-dəki məlumatları lokal məlumat faylına köçürmək üçün sinxronizasiya edin.
-                </p>
-               <Button onClick={handleSync} disabled={isSyncing} className="w-full">
-                {isSyncing ? 'Sinxronizasiya edilir...' : 'Məlumatları Sinxronizasiya Et'}
-              </Button>
-            </CardContent>
-          </Card>
         </div>
         
-        {syncedData && (
-             <Card>
-                <CardHeader>
-                    <CardTitle>Sinxronizasiya Nəticəsi</CardTitle>
-                    <CardDescription>Aşağıdakı kodu kopyalayıb `src/lib/placeholder-data.ts` faylının məzmunu ilə tam əvəz edin.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Textarea 
-                        readOnly
-                        value={syncedData}
-                        className="h-96 font-mono text-xs"
-                    />
-                    <Button onClick={() => navigator.clipboard.writeText(syncedData)} className="mt-2">
-                        Kodu Kopyala
-                    </Button>
-                </CardContent>
-            </Card>
-        )}
-
-        <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          <Card className="xl:col-span-2">
+        <div className="grid gap-4 md:gap-8">
+          <Card>
             <CardHeader className="flex flex-row items-center">
               <div className="grid gap-2">
                 <CardTitle>Son Qeydiyyatlar</CardTitle>
@@ -201,7 +154,7 @@ export default function AdminDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'}
+                          {student.createdAt?.toDate ? student.createdAt.toDate().toLocaleDateString() : (student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-')}
                         </TableCell>
                       </TableRow>
                     ))

@@ -1,12 +1,13 @@
 'use client';
 import { News } from '@/types';
-import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { news as allNews } from '@/lib/placeholder-data';
+import { useCollectionOptimized, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+
 
 function NewsCardSkeleton() {
     return (
@@ -26,14 +27,10 @@ function NewsCardSkeleton() {
 }
 
 export default function NewsPage() {
-    const [news, setNews] = useState<News[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const firestore = useFirestore();
+    const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc')) : null, [firestore]);
+    const { data: news, isLoading } = useCollectionOptimized<News>(newsQuery);
 
-    useEffect(() => {
-        const sortedNews = [...allNews].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setNews(sortedNews);
-        setIsLoading(false);
-    }, []);
 
     return (
         <main className="container mx-auto py-12 px-4">
@@ -50,7 +47,9 @@ export default function NewsPage() {
                 </div>
             ) : news && news.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {news.map(item => (
+                    {news.map(item => {
+                        const createdAtDate = item.createdAt?.toDate ? item.createdAt.toDate() : new Date(item.createdAt || 0);
+                        return (
                         <Link key={item.id} href={`/xeberler/${item.slug}`} className="block group">
                             <Card className="h-full flex flex-col overflow-hidden transition-shadow duration-300 hover:shadow-xl">
                                 {item.coverImageUrl && (
@@ -66,7 +65,7 @@ export default function NewsPage() {
                                 <CardHeader>
                                     <CardTitle className="text-xl group-hover:text-primary transition-colors">{item.title}</CardTitle>
                                     <CardDescription>
-                                        {item.createdAt ? format(new Date(item.createdAt), 'dd MMMM, yyyy') : '-'}
+                                        {format(createdAtDate, 'dd MMMM, yyyy')}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-grow">
@@ -76,7 +75,7 @@ export default function NewsPage() {
                                 </CardContent>
                             </Card>
                         </Link>
-                    ))}
+                    )})}
                 </div>
             ) : (
                 <div className="text-center py-20 text-muted-foreground">
