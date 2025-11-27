@@ -438,6 +438,18 @@
           ]
         }
       },
+        {
+        "path": "/users/{userId}/updates/{updateId}",
+        "definition": {
+          "entityName": "StudentOrgUpdate",
+          "schema": { "$ref": "#/backend/entities/StudentOrgUpdate" },
+          "description": "Stores updates for a specific student organization, within their user document.",
+          "params": [
+            { "name": "userId", "description": "The ID of the student organization." },
+            { "name": "updateId", "description": "The unique ID for the update." }
+          ]
+        }
+      },
       {
         "path": "/skills/{skillId}",
         "definition": {
@@ -483,34 +495,6 @@
               "name": "facultyId",
               "description": "The unique identifier for the faculty."
             }
-          ]
-        }
-      },
-      {
-        "path": "/student-organizations/{orgId}",
-        "definition": {
-          "entityName": "StudentOrganization",
-          "schema": {
-            "$ref": "#/backend/entities/StudentOrganization"
-          },
-          "description": "This collection is deprecated. Student organization data is now stored in the `/users` collection with `role: 'student-organization'`.",
-          "params": [
-            {
-              "name": "orgId",
-              "description": "The unique identifier for the student organization."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/student-organizations/{orgId}/updates/{updateId}",
-        "definition": {
-          "entityName": "StudentOrgUpdate",
-          "schema": { "$ref": "#/backend/entities/StudentOrgUpdate" },
-          "description": "This subcollection is deprecated. Updates are now stored in a subcollection under the organization's document in the `/users` collection.",
-          "params": [
-            { "name": "orgId", "description": "The ID of the student organization." },
-            { "name": "updateId", "description": "The unique ID for the update." }
           ]
         }
       },

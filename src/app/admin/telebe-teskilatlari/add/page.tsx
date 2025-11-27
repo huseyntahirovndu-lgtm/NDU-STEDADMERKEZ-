@@ -18,7 +18,7 @@ export default function AddStudentOrgPage() {
             return false;
         }
 
-        const newOrgData: Omit<StudentOrganization, 'id' | 'createdAt' | 'leaderId' | 'faculty' | 'memberIds' > = {
+        const newOrgData: Omit<StudentOrganization, 'id' | 'createdAt' | 'memberIds' > = {
             role: 'student-organization',
             name: data.name,
             email: data.email,
