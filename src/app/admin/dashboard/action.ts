@@ -26,6 +26,7 @@ export async function syncDataAction() {
     const { firestore } = initializeServerFirebase();
 
     const usersSnap = await getDocs(collection(firestore, 'users'));
+    const orgsSnap = await getDocs(collection(firestore, 'student-organizations'));
     const newsSnap = await getDocs(collection(firestore, 'news'));
     
     const allUsers: AppUser[] = [];
@@ -34,6 +35,7 @@ export async function syncDataAction() {
     const allCertificates: Certificate[] = [];
     const allStudentOrgUpdates: StudentOrgUpdate[] = [];
 
+    // Fetch students and admins
     for (const doc of usersSnap.docs) {
         const user = doc.data() as AppUser;
         allUsers.push(user);
@@ -47,17 +49,23 @@ export async function syncDataAction() {
             
             const certificatesSnap = await getDocs(collection(firestore, `users/${user.id}/certificates`));
             certificatesSnap.forEach(cDoc => allCertificates.push({ id: cDoc.id, ...cDoc.data() } as Certificate));
-        } else if (user.role === 'student-organization') {
-             const updatesSnap = await getDocs(collection(firestore, `users/${user.id}/updates`));
-             updatesSnap.forEach(uDoc => allStudentOrgUpdates.push({ id: uDoc.id, ...uDoc.data() } as StudentOrgUpdate));
         }
+    }
+    
+    // Fetch student organizations
+    const studentOrgs: StudentOrganization[] = [];
+     for (const doc of orgsSnap.docs) {
+        const org = doc.data() as StudentOrganization;
+        studentOrgs.push(org);
+
+        const updatesSnap = await getDocs(collection(firestore, `student-organizations/${org.id}/updates`));
+        updatesSnap.forEach(uDoc => allStudentOrgUpdates.push({ id: uDoc.id, ...uDoc.data() } as StudentOrgUpdate));
     }
     
     const allNews: News[] = [];
     newsSnap.forEach(doc => allNews.push({ id: doc.id, ...doc.data() } as News));
     
     const students = allUsers.filter(u => u.role === 'student');
-    const studentOrgs = allUsers.filter(u => u.role === 'student-organization');
     
 const faculties: FacultyData[] = [
     { id: '1', name: "İqtisadiyyat və idarəetmə fakültəsi" },
