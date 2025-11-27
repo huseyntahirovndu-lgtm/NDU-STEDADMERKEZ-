@@ -58,7 +58,7 @@ export default function StudentOrganizationLayout({
 
   }, [isLoading, user, router, toast]);
 
-  if (isLoading || user?.role !== 'student-organization' || (user as StudentOrganization).status !== 'təsdiqlənmiş') {
+  if (isLoading || !organization || organization.role !== 'student-organization' || organization.status !== 'təsdiqlənmiş') {
       return <div className="flex h-screen items-center justify-center">Yüklənir və ya səlahiyyət yoxlanılır...</div>;
   }
   
@@ -96,11 +96,9 @@ export default function StudentOrganizationLayout({
             </nav>
           </div>
           <div className="mt-auto p-4 border-t">
-            <Link href="/profile/edit">
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                <Settings className="h-4 w-4" /> Profil Ayarları
+             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 disabled">
+                <Settings className="h-4 w-4" /> Profil Ayarları (Tezliklə)
               </Button>
-            </Link>
           </div>
         </div>
       </div>
@@ -140,11 +138,9 @@ export default function StudentOrganizationLayout({
                 ))}
               </nav>
                 <div className="mt-auto p-4 border-t">
-                  <Link href="/profile/edit">
-                    <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                      <Settings className="h-4 w-4" /> Profil Ayarları
-                    </Button>
-                  </Link>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 disabled">
+                    <Settings className="h-4 w-4" /> Profil Ayarları (Tezliklə)
+                  </Button>
                 </div>
             </SheetContent>
           </Sheet>

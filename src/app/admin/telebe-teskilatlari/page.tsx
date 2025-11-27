@@ -91,9 +91,6 @@ export default function AdminStudentOrgsPage() {
                     <TableHead>Təşkilat Adı</TableHead>
                     <TableHead>E-poçt</TableHead>
                     <TableHead className="hidden md:table-cell">
-                        Fakültə
-                    </TableHead>
-                     <TableHead className="hidden md:table-cell">
                         Status
                     </TableHead>
                     <TableHead className="text-right">Əməliyyatlar</TableHead>
@@ -102,16 +99,13 @@ export default function AdminStudentOrgsPage() {
                 <TableBody>
                      {isLoading ? (
                          <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">Yüklənir...</TableCell>
+                            <TableCell colSpan={4} className="h-24 text-center">Yüklənir...</TableCell>
                         </TableRow>
                     ) : organizations && organizations.length > 0 ? (
                         organizations.map((org) => (
                         <TableRow key={org.id}>
                             <TableCell className="font-medium">{org.name}</TableCell>
                             <TableCell>{org.email}</TableCell>
-                            <TableCell className="hidden md:table-cell">
-                                {org.faculty}
-                            </TableCell>
                             <TableCell className="hidden md:table-cell">
                                 <Badge variant={org.status === 'təsdiqlənmiş' ? 'default' : org.status === 'gözləyir' ? 'secondary' : 'outline'}>
                                   {statusMap[org.status]}
@@ -154,7 +148,7 @@ export default function AdminStudentOrgsPage() {
                         ))
                     ) : (
                          <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">Heç bir təşkilat tapılmadı.</TableCell>
+                            <TableCell colSpan={4} className="h-24 text-center">Heç bir təşkilat tapılmadı.</TableCell>
                         </TableRow>
                     )}
                 </TableBody>

@@ -152,8 +152,8 @@ export default function AdminDashboard() {
                           {student.faculty}
                         </TableCell>
                         <TableCell className="hidden xl:table-column">
-                          <Badge variant={student.status === 'təsdiqlənmiş' ? 'default' : 'secondary'}>
-                            {student.status}
+                           <Badge variant={!student.status ? 'secondary' : student.status === 'təsdiqlənmiş' ? 'default' : 'secondary'}>
+                            {student.status || 'gözləyir'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">

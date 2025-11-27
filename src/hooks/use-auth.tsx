@@ -127,8 +127,14 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         setUser(orgData);
         localStorage.setItem('userId', orgData.id);
 
-        if (orgData.role === 'student-organization') router.push('/telebe-teskilati-paneli/dashboard');
-        else router.push('/');
+        if (orgData.role === 'student-organization' && orgData.status === 'təsdiqlənmiş') {
+          router.push('/telebe-teskilati-paneli/dashboard');
+        } else if (orgData.role === 'student-organization' && orgData.status !== 'təsdiqlənmiş'){
+           router.push('/');
+        }
+        else {
+          router.push('/');
+        }
 
         setLoading(false);
         return true;

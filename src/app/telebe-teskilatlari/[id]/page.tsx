@@ -38,11 +38,11 @@ export default function StudentOrgDetailsPage() {
 
   const orgId = typeof id === 'string' ? id : '';
 
-  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'users', orgId) : null), [firestore, orgId]);
+  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'student-organizations', orgId) : null), [firestore, orgId]);
   const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
   
   const updatesQuery = useMemoFirebase(
-    () => (firestore && orgId ? query(collection(firestore, `users/${orgId}/updates`), orderBy('createdAt', 'desc')) : null),
+    () => (firestore && orgId ? query(collection(firestore, `student-organizations/${orgId}/updates`), orderBy('createdAt', 'desc')) : null),
     [firestore, orgId]
 );
   const { data: updates, isLoading: updatesLoading } = useCollection<StudentOrgUpdate>(updatesQuery);
@@ -53,7 +53,7 @@ export default function StudentOrgDetailsPage() {
     return <OrgDetailsLoading />;
   }
 
-  if (!organization || organization.role !== 'student-organization') {
+  if (!organization) {
     return <div className="text-center py-20">Tələbə təşkilatı tapılmadı.</div>;
   }
 
