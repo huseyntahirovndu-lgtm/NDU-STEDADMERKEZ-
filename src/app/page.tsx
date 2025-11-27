@@ -21,6 +21,8 @@ import { selectTopStories } from '@/app/actions';
 import { format } from 'date-fns';
 import { initializeServerFirebase } from '@/firebase/server-init';
 
+export const dynamic = 'force-dynamic';
+
 interface EnrichedProject extends Project {
     student?: Student;
 }
@@ -69,7 +71,7 @@ export default async function HomePage() {
     getDocs(query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş"))),
     getDocs(collection(firestore, "categories")),
     getDocs(query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3))),
-    getDocs(query(collection(firestore, "projects"), limit(3))),
+    getDocs(query(collection(firestore, "projects"), orderBy('studentId'), limit(3))),
     getDocs(collection(firestore, 'achievements')),
   ]);
 
@@ -173,12 +175,12 @@ export default async function HomePage() {
               />
               <StatCard
                 title="Aktiv Layihələr"
-                value={projectsData.length.toString()}
+                value={(projectsData?.length || 0).toString()}
                 icon={Lightbulb}
               />
               <StatCard
                 title="Ümumi Uğurlar"
-                value={achievementsData.length.toString()}
+                value={(achievementsData?.length || 0).toString()}
                 icon={Trophy}
               />
             </div>
