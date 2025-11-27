@@ -1,4 +1,3 @@
-'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -14,15 +13,13 @@ import { StudentCard } from '@/components/student-card';
 import { CategoryPieChart } from '@/components/charts/category-pie-chart';
 import { FacultyBarChart } from '@/components/charts/faculty-bar-chart';
 import { Student, Project, CategoryData, Achievement, StudentOrganization, News } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { selectTopStories } from '@/app/actions';
 import { format } from 'date-fns';
+import { initializeServerFirebase } from '@/firebase/server-init';
 
 interface EnrichedProject extends Project {
     student?: Student;
@@ -56,112 +53,93 @@ const SuccessStoryCard = ({ story }: { story: SuccessStory }) => (
     </Card>
 );
 
-export default function HomePage() {
-  const firestore = useFirestore();
-  const { user } = useAuth();
+export default async function HomePage() {
+  const { firestore } = initializeServerFirebase();
 
-  const studentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student")) : null, [firestore]);
-  const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")) : null, [firestore]);
-  const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
-  const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
-  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), limit(3)) : null, [firestore]);
-  const achievementsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'achievements')) : null, [firestore]);
+  // Fetch all data in parallel on the server
+  const [
+    studentsSnap,
+    studentOrgsSnap,
+    categoriesSnap,
+    newsSnap,
+    projectsSnap,
+    achievementsSnap
+  ] = await Promise.all([
+    getDocs(query(collection(firestore, "users"), where("status", "==", "təsdiqlənmiş"), where("role", "==", "student"))),
+    getDocs(query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş"))),
+    getDocs(collection(firestore, "categories")),
+    getDocs(query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3))),
+    getDocs(query(collection(firestore, "projects"), limit(3))),
+    getDocs(collection(firestore, 'achievements')),
+  ]);
 
+  const students = studentsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Student[];
+  const studentOrgs = studentOrgsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as StudentOrganization[];
+  const categories = categoriesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as CategoryData[];
+  const latestNews = newsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as News[];
+  const projectsData = projectsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Project[];
+  const achievementsData = achievementsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Achievement[];
 
-  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
-  const { data: studentOrgs, isLoading: studentOrgsLoading } = useCollection<StudentOrganization>(studentOrgsQuery);
-  const { data: categories, isLoading: categoriesLoading } = useCollection<CategoryData>(categoriesQuery);
-  const { data: latestNews, isLoading: newsLoading } = useCollection<News>(newsQuery);
-  const { data: projectsData, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
-  const { data: achievementsData, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+  // --- Start server-side data processing ---
 
+  const sortedByTalent = [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
+  const topTalents = sortedByTalent.slice(0, 10);
 
-  const [topTalents, setTopTalents] = useState<Student[]>([]);
-  const [newMembers, setNewMembers] = useState<Student[]>([]);
-  const [strongestProjects, setStrongestProjects] = useState<EnrichedProject[]>([]);
-  const [popularSkills, setPopularSkills] = useState<string[]>([]);
-  const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
+  const sortedByDate = [...students].sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0));
+  const newMembers = sortedByDate.slice(0, 5);
+
+  const allSkills = students.flatMap(s => s.skills || []).map(s => s.name);
+  const skillCounts = allSkills.reduce((acc, skill) => {
+      acc[skill] = (acc[skill] || 0) + 1;
+      return acc;
+  }, {} as Record<string, number>);
+  const popularSkills = Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]).slice(0, 10);
   
-  const statsLoading = studentsLoading || projectsLoading || achievementsLoading;
-  const isLoading = statsLoading || studentOrgsLoading || categoriesLoading || newsLoading;
+  // Enrich projects with student data
+  const strongestProjects: EnrichedProject[] = await Promise.all(projectsData.map(async (project) => {
+      const studentDoc = await getDoc(doc(firestore, 'users', project.studentId));
+      if (studentDoc.exists()) {
+          return { ...project, student: studentDoc.data() as Student };
+      }
+      return project;
+  }));
 
-  useEffect(() => {
-    if (!students || students.length === 0 || !firestore) return;
+  // Select success stories
+  let successStories: SuccessStory[] = [];
+  const storiesToConsider = students
+      .filter(s => s.successStory && s.successStory.trim().length > 10)
+      .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory!, profilePictureUrl: s.profilePictureUrl }));
 
-    const sortedByTalent = [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
-    setTopTalents(sortedByTalent.slice(0, 10));
+  if (storiesToConsider.length > 0) {
+      if (storiesToConsider.length <= 2) {
+          successStories = storiesToConsider.map(s => ({
+              studentId: s.id,
+              name: `${s.firstName} ${s.lastName}`,
+              faculty: s.faculty,
+              story: s.successStory,
+              profilePictureUrl: s.profilePictureUrl
+          }));
+      } else {
+          try {
+              const result = await selectTopStories({ stories: storiesToConsider });
+              successStories = result.selectedStories.map(s => {
+                  const originalStudent = storiesToConsider.find(stc => stc.id === s.studentId);
+                  return { ...s, profilePictureUrl: originalStudent?.profilePictureUrl };
+              });
+          } catch (error) {
+              console.error("AI story selection failed, using fallback:", error);
+              successStories = storiesToConsider.slice(0, 2).map(s => ({
+                   studentId: s.id,
+                   name: `${s.firstName} ${s.lastName}`,
+                   faculty: s.faculty,
+                   story: s.successStory,
+                   profilePictureUrl: s.profilePictureUrl
+              }));
+          }
+      }
+  }
 
-    const sortedByDate = [...students].sort((a, b) => (a.createdAt && b.createdAt ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : 0));
-    setNewMembers(sortedByDate.slice(0, 5));
-    
-    const allSkills = students.flatMap(s => s.skills || []).map(s => s.name);
-    const skillCounts = allSkills.reduce((acc, skill) => {
-        acc[skill] = (acc[skill] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    const sortedSkills = Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]);
-    setPopularSkills(sortedSkills.slice(0, 10));
-    
-    const fetchStories = async () => {
-        const storiesToConsider = students
-            .filter(s => s.successStory && s.successStory.trim().length > 10)
-            .map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, faculty: s.faculty, successStory: s.successStory!, profilePictureUrl: s.profilePictureUrl }));
-        
-        if (storiesToConsider.length === 0) return;
-
-        if (storiesToConsider.length <= 2) {
-            setSuccessStories(storiesToConsider.map(s => ({
-                studentId: s.id,
-                name: `${s.firstName} ${s.lastName}`,
-                faculty: s.faculty,
-                story: s.successStory,
-                profilePictureUrl: s.profilePictureUrl
-            })));
-            return;
-        }
-
-        try {
-            const result = await selectTopStories({ stories: storiesToConsider });
-            const enrichedStories = result.selectedStories.map(s => {
-                const originalStudent = storiesToConsider.find(stc => stc.id === s.studentId);
-                return { ...s, profilePictureUrl: originalStudent?.profilePictureUrl };
-            });
-            setSuccessStories(enrichedStories);
-        } catch (error) {
-            console.error("AI story selection failed, using fallback:", error);
-            const fallbackStories = storiesToConsider.slice(0, 2).map(s => ({
-                 studentId: s.id,
-                 name: `${s.firstName} ${s.lastName}`,
-                 faculty: s.faculty,
-                 story: s.successStory,
-                 profilePictureUrl: s.profilePictureUrl
-            }));
-            setSuccessStories(fallbackStories);
-        }
-    };
-    
-    fetchStories();
-
-  }, [students, firestore]);
-
-   useEffect(() => {
-    if (!projectsData || !firestore) return;
-
-    const enrichProjects = async () => {
-        const enriched = await Promise.all(projectsData.map(async (project) => {
-            const studentDoc = await getDoc(doc(firestore, 'users', project.studentId));
-            if (studentDoc.exists()) {
-                return { ...project, student: studentDoc.data() as Student };
-            }
-            return project;
-        }));
-        setStrongestProjects(enriched);
-    };
-    
-    enrichProjects();
-   }, [projectsData, firestore]);
-
+  // --- End server-side data processing ---
 
   return (
     <div className="flex flex-col">
@@ -185,22 +163,22 @@ export default function HomePage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Ümumi Tələbə Sayı"
-                value={isLoading ? '...' : (students?.length.toString() ?? '0')}
+                value={students.length.toString()}
                 icon={Users}
               />
               <StatCard
                 title="Tələbə Təşkilatları"
-                value={isLoading ? '...' : (studentOrgs?.length.toString() ?? '0')}
+                value={studentOrgs.length.toString()}
                 icon={Library}
               />
               <StatCard
                 title="Aktiv Layihələr"
-                value={statsLoading ? '...' : (projectsData?.length.toString() ?? '0')}
+                value={projectsData.length.toString()}
                 icon={Lightbulb}
               />
               <StatCard
                 title="Ümumi Uğurlar"
-                value={statsLoading ? '...' : (achievementsData?.length.toString() ?? '0')}
+                value={achievementsData.length.toString()}
                 icon={Trophy}
               />
             </div>
@@ -217,17 +195,11 @@ export default function HomePage() {
                 </Link>
               </Button>
             </div>
-             {isLoading ? (
-               <div className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {Array.from({length: 10}).map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
-               </div>
-             ) : (
                <div className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {topTalents.map((student) => (
                     <StudentCard key={student.id} student={student} />
                   ))}
                 </div>
-             )}
           </section>
           
            <section className="py-12">
@@ -235,13 +207,7 @@ export default function HomePage() {
                   <h2 className="text-3xl md:text-4xl font-bold">Son Xəbərlər</h2>
                   <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Universitet və tələbə həyatı ilə bağlı ən son yeniliklər.</p>
               </div>
-              {isLoading ? (
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <Skeleton className="h-64 w-full" />
-                      <Skeleton className="h-64 w-full" />
-                      <Skeleton className="h-64 w-full" />
-                  </div>
-              ) : latestNews && latestNews.length > 0 ? (
+              {latestNews.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       {latestNews.map(newsItem => (
                          <Link key={newsItem.id} href={`/xeberler/${newsItem.slug}`} className="block group">
@@ -253,7 +219,7 @@ export default function HomePage() {
                              )}
                              <CardHeader>
                                <CardTitle className="text-lg group-hover:text-primary transition-colors">{newsItem.title}</CardTitle>
-                               <CardDescription>{newsItem.createdAt ? format(newsItem.createdAt.toDate(), 'dd MMMM, yyyy') : ''}</CardDescription>
+                               <CardDescription>{newsItem.createdAt?.toDate ? format(newsItem.createdAt.toDate(), 'dd MMMM, yyyy') : ''}</CardDescription>
                              </CardHeader>
                              <CardContent className="flex-grow">
                                <p className="text-sm text-muted-foreground line-clamp-3">{newsItem.content.replace(/<[^>]*>?/gm, '')}</p>
@@ -267,7 +233,7 @@ export default function HomePage() {
                       <p>Hələlik heç bir xəbər yoxdur.</p>
                   </div>
               )}
-               {latestNews && latestNews.length > 0 && (
+               {latestNews.length > 0 && (
                 <div className="text-center mt-8">
                     <Button asChild>
                         <Link href="/xeberler">Bütün Xəbərlər <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -279,13 +245,6 @@ export default function HomePage() {
           <section className="py-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               <div className="lg:col-span-2">
                   <h2 className="text-3xl md:text-4xl font-bold mb-8">Ən Güclü Tələbə Layihələri</h2>
-                  {projectsLoading ? (
-                       <div className="space-y-4">
-                          <Skeleton className="h-32 w-full" />
-                          <Skeleton className="h-32 w-full" />
-                          <Skeleton className="h-32 w-full" />
-                      </div>
-                  ) : (
                       <div className="space-y-6">
                           {strongestProjects.length > 0 ? strongestProjects.map(project => (
                               <Link key={project.id} href={`/profile/${project.student?.id}`} className="block">
@@ -311,15 +270,9 @@ export default function HomePage() {
                                <p className="text-center text-muted-foreground py-10">Göstərmək üçün tələbə layihəsi tapılmadı.</p>
                           )}
                       </div>
-                  )}
               </div>
                <div>
                   <h2 className="text-3xl md:text-4xl font-bold mb-8">Populyar Bacarıqlar</h2>
-                  {isLoading ? (
-                      <div className="flex flex-wrap gap-2">
-                          {Array.from({length: 10}).map((_, i) => <Skeleton key={i} className="h-8 w-24" />)}
-                      </div>
-                  ) : (
                       <div className="flex flex-wrap gap-3">
                           {popularSkills.length > 0 ? popularSkills.map(skill => (
                               <Badge key={skill} variant="secondary" className="text-base px-4 py-2">{skill}</Badge>
@@ -327,17 +280,16 @@ export default function HomePage() {
                              <p className="text-muted-foreground">Heç bir bacarıq tapılmadı.</p>
                           )}
                       </div>
-                  )}
               </div>
           </section>
 
           <section className="py-12">
              <div className="grid gap-8 lg:grid-cols-5">
                 <div className="lg:col-span-2">
-                    <CategoryPieChart students={students || []} categoriesData={categories || []} />
+                    <CategoryPieChart students={students} categoriesData={categories} />
                 </div>
                 <div className="lg:col-span-3">
-                    <FacultyBarChart students={students || []} />
+                    <FacultyBarChart students={students} />
                 </div>
             </div>
           </section>
@@ -347,12 +299,7 @@ export default function HomePage() {
                   <h2 className="text-3xl md:text-4xl font-bold">Tələbə Uğur Hekayələri</h2>
                   <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Platformamızın tələbələrimizin karyera yoluna necə təsir etdiyini kəşf edin.</p>
               </div>
-              {isLoading ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <Skeleton className="h-48 w-full" />
-                      <Skeleton className="h-48 w-full" />
-                  </div>
-              ) : successStories.length > 0 ? (
+              {successStories.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {successStories.map(story => (
                           <SuccessStoryCard key={story.studentId} story={story} />
@@ -377,17 +324,11 @@ export default function HomePage() {
                 </Link>
               </Button>
             </div>
-            {isLoading ? (
-               <div className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
-               </div>
-             ) : (
               <div className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {newMembers.map((student) => (
                   <StudentCard key={student.id} student={student} />
                   ))}
               </div>
-             )}
           </section>
         </div>
       </main>
