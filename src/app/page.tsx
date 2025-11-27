@@ -64,7 +64,7 @@ export default function HomePage() {
   const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")) : null, [firestore]);
   const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
   const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
-  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc'), limit(3)) : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), limit(3)) : null, [firestore]);
   const achievementsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'achievements')) : null, [firestore]);
 
 
@@ -86,7 +86,7 @@ export default function HomePage() {
   const isLoading = statsLoading || studentOrgsLoading || categoriesLoading || newsLoading;
 
   useEffect(() => {
-    if (!students || students.length === 0) return;
+    if (!students || students.length === 0 || !firestore) return;
 
     const sortedByTalent = [...students].sort((a, b) => (b.talentScore || 0) - (a.talentScore || 0));
     setTopTalents(sortedByTalent.slice(0, 10));
@@ -123,21 +123,27 @@ export default function HomePage() {
 
         try {
             const result = await selectTopStories({ stories: storiesToConsider });
-            setSuccessStories(result.selectedStories.map(s => ({...s, profilePictureUrl: storiesToConsider.find(stc => stc.id === s.studentId)?.profilePictureUrl})));
+            const enrichedStories = result.selectedStories.map(s => {
+                const originalStudent = storiesToConsider.find(stc => stc.id === s.studentId);
+                return { ...s, profilePictureUrl: originalStudent?.profilePictureUrl };
+            });
+            setSuccessStories(enrichedStories);
         } catch (error) {
             console.error("AI story selection failed, using fallback:", error);
-            setSuccessStories(storiesToConsider.slice(0, 2).map(s => ({
+            const fallbackStories = storiesToConsider.slice(0, 2).map(s => ({
                  studentId: s.id,
                  name: `${s.firstName} ${s.lastName}`,
                  faculty: s.faculty,
                  story: s.successStory,
                  profilePictureUrl: s.profilePictureUrl
-            })));
+            }));
+            setSuccessStories(fallbackStories);
         }
     };
+    
     fetchStories();
 
-  }, [students]);
+  }, [students, firestore]);
 
    useEffect(() => {
     if (!projectsData || !firestore) return;
@@ -189,12 +195,12 @@ export default function HomePage() {
               />
               <StatCard
                 title="Aktiv Layihələr"
-                value={isLoading ? '...' : (projectsData?.length.toString() ?? '0')}
+                value={statsLoading ? '...' : (projectsData?.length.toString() ?? '0')}
                 icon={Lightbulb}
               />
               <StatCard
                 title="Ümumi Uğurlar"
-                value={isLoading ? '...' : (achievementsData?.length.toString() ?? '0')}
+                value={statsLoading ? '...' : (achievementsData?.length.toString() ?? '0')}
                 icon={Trophy}
               />
             </div>
@@ -273,7 +279,7 @@ export default function HomePage() {
           <section className="py-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               <div className="lg:col-span-2">
                   <h2 className="text-3xl md:text-4xl font-bold mb-8">Ən Güclü Tələbə Layihələri</h2>
-                  {isLoading ? (
+                  {projectsLoading ? (
                        <div className="space-y-4">
                           <Skeleton className="h-32 w-full" />
                           <Skeleton className="h-32 w-full" />
