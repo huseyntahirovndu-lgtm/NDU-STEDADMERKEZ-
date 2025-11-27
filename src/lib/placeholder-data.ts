@@ -1931,7 +1931,7 @@ export const certificates: Certificate[] = [
   },
   {
     id: "0hs5h5bioymoaDpyP1vi",
-    name: "İDEA Education Center MMC'nin nəzdində fəaliyyət göstərən GeniusMind Academy'nin 26.05.2025-ci il tarixində təşkil etdiyi \"Yaşadığımız hekayələrdən aldığımız qorxulara necə qalib gəlməli?\" adlı təlimində iştirak etdiyi üçün təqdim olunur!",
+    name: "İDEA Education Center MMC\'nin nəzdində fəaliyyət göstərən GeniusMind Academy\'nin 26.05.2025-ci il tarixində təşkil etdiyi \"Yaşadığımız hekayələrdən aldığımız qorxulara necə qalib gəlməli?\" adlı təlimində iştirak etdiyi üçün təqdim olunur!",
     certificateURL: "",
     studentId: "39ff1ae8-ed14-4652-a695-13ec81cd22b9",
     level: "Universitet"

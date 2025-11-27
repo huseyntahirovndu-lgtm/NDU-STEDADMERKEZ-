@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface StudentCardProps {
   student: Student;
@@ -33,9 +35,15 @@ const categoryColors: { [key: string]: string } = {
 };
 
 
-export function StudentCard({ student, className }: StudentCardProps) {
+export function StudentCard({ student: initialStudent, className }: StudentCardProps) {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const studentDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', initialStudent.id) : null, [firestore, initialStudent.id]);
+  const { data: liveStudentData } = useDoc<Student>(studentDocRef);
+
+  const student = liveStudentData || initialStudent;
 
   const organization = user?.role === 'organization' ? user as Organization : null;
   const isSaved = organization?.savedStudentIds?.includes(student.id);
