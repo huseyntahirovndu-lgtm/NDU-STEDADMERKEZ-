@@ -108,11 +108,17 @@ function EditProfilePageComponent() {
   const userDocRef = useMemoFirebase(() => userIdToFetch ? doc(firestore, 'users', userIdToFetch) : null, [firestore, userIdToFetch]);
   const { data: targetUser, isLoading: userLoading } = useDoc<Student>(userDocRef);
 
-  const projectsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `projects`) : null, [userIdToFetch]);
-  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(query(projectsQuery, where("studentId", "==", userIdToFetch || "")));
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !userIdToFetch) return null;
+    return query(collection(firestore, 'projects'), where("studentId", "==", userIdToFetch));
+  }, [firestore, userIdToFetch]);
+  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
-  const achievementsQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `achievements`) : null, [userIdToFetch]);
-  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(query(achievementsQuery, where("studentId", "==", userIdToFetch || "")));
+  const achievementsQuery = useMemoFirebase(() => {
+    if (!firestore || !userIdToFetch) return null;
+    return query(collection(firestore, 'achievements'), where("studentId", "==", userIdToFetch));
+  }, [firestore, userIdToFetch]);
+  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
 
   const certificatesQuery = useMemoFirebase(() => userIdToFetch ? collection(firestore, `users/${userIdToFetch}/certificates`) : null, [firestore, userIdToFetch]);
   const { data: certificates, isLoading: certificatesLoading } = useCollection<Certificate>(certificatesQuery);
