@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { selectTopStories } from '@/app/actions';
 import { format } from 'date-fns';
 
@@ -64,8 +64,8 @@ export default function HomePage() {
   const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")) : null, [firestore]);
   const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
   const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
-  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc')) : null, [firestore]);
-  const achievementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'achievements') : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc'), limit(3)) : null, [firestore]);
+  const achievementsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'achievements')) : null, [firestore]);
 
 
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
@@ -140,15 +140,21 @@ export default function HomePage() {
   }, [students]);
 
    useEffect(() => {
-    if (!projectsData || !students) return;
+    if (!projectsData || !firestore) return;
+
+    const enrichProjects = async () => {
+        const enriched = await Promise.all(projectsData.map(async (project) => {
+            const studentDoc = await getDoc(doc(firestore, 'users', project.studentId));
+            if (studentDoc.exists()) {
+                return { ...project, student: studentDoc.data() as Student };
+            }
+            return project;
+        }));
+        setStrongestProjects(enriched);
+    };
     
-    const enriched = projectsData.map(project => {
-        const student = students.find(s => s.id === project.studentId);
-        return { ...project, student };
-    });
-    setStrongestProjects(enriched);
-    
-   }, [projectsData, students]);
+    enrichProjects();
+   }, [projectsData, firestore]);
 
 
   return (
