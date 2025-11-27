@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, PlusCircle, Award, Briefcase, FileText, User as UserIcon, X, Link, Upload } from 'lucide-react';
+import { Trash2, PlusCircle, Award, Briefcase, FileText, User as UserIcon, X, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, query, setDoc, where, addDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -131,9 +131,7 @@ function EditProfilePageComponent() {
 
   const triggerTalentScoreUpdate = useCallback(async (userId: string) => {
     if (!firestore) return;
-    setIsSaving(true);
-    toast({ title: "İstedad Balı Hesablanır...", description: "Profiliniz yenilənir, bu proses bir az vaxt ala bilər." });
-
+    console.log("Starting talent score update for", userId);
     try {
         const allUsersSnapshot = await getDocs(query(collection(firestore, 'users'), where('role', '==', 'student')));
         
@@ -169,12 +167,10 @@ function EditProfilePageComponent() {
         const targetUserDoc = doc(firestore, 'users', userId);
         await updateDocumentNonBlocking(targetUserDoc, { talentScore: scoreResult.talentScore });
 
-        toast({ title: "Profil Yeniləndi!", description: `Yeni istedad balınız: ${scoreResult.talentScore}. Səbəb: ${scoreResult.reasoning}` });
+        toast({ title: "İstedad Balınız Yeniləndi!", description: `Yeni istedad balınız: ${scoreResult.talentScore}.` });
     } catch (error: any) {
         console.error("Error updating talent score:", error);
-        toast({ variant: "destructive", title: "Xəta", description: `İstedad balını yeniləyərkən xəta baş verdi: ${error.message}` });
-    } finally {
-        setIsSaving(false);
+        toast({ variant: "destructive", title: "Xəta", description: `İstedad balını arxa planda yeniləyərkən xəta baş verdi.` });
     }
   }, [firestore, toast]);
   
@@ -188,10 +184,6 @@ function EditProfilePageComponent() {
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     mode: 'onChange',
-    defaultValues: {
-        skills: [],
-        courseYear: 1,
-    }
   });
   
   const { control: profileControl, watch: watchProfile, setValue: setProfileValue } = profileForm;
@@ -270,6 +262,7 @@ function EditProfilePageComponent() {
       };
       reader.readAsDataURL(file);
     }
+     e.target.value = '';
   };
 
   const handleSaveCroppedImage = async () => {
@@ -292,33 +285,31 @@ function EditProfilePageComponent() {
     }
   };
 
-    const onProfileSubmit: SubmitHandler<z.infer<typeof profileSchema>> = (data) => {
+  const onProfileSubmit: SubmitHandler<z.infer<typeof profileSchema>> = async (data) => {
       if (!targetUser || !userDocRef) return;
       
-      const updateData: { [key: string]: any } = { ...data };
-      if (updateData.gpa === '' || updateData.gpa === null || isNaN(Number(updateData.gpa))) {
-          updateData.gpa = 0;
-      } else {
-          updateData.gpa = Number(updateData.gpa);
-      }
-      
-      if (!updateData.skills) {
-        updateData.skills = [];
-      }
+      setIsSaving(true);
 
-      setDoc(userDocRef, updateData, { merge: true });
+      const updateData: { [key: string]: any } = { ...data };
+      updateData.gpa = Number(updateData.gpa) || 0;
+      
+      updateDocumentNonBlocking(userDocRef, updateData);
+
       if (currentUser && currentUser.id === targetUser.id) {
         updateUser(updateData);
       }
       
+      toast({ title: "Profil məlumatları yadda saxlanıldı", description: "Dəyişikliklər uğurla tətbiq edildi." });
+      setIsSaving(false);
+      
+      // Trigger AI score update in the background (fire and forget)
       triggerTalentScoreUpdate(targetUser.id);
-      toast({ title: "Profil məlumatları yeniləndi" });
-    };
+  };
   
-  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = async (data) => {
+  const onProjectSubmit: SubmitHandler<z.infer<typeof projectSchema>> = (data) => {
     if (!targetUser || !firestore) return;
     const projectCollectionRef = collection(firestore, `projects`);
-    await addDoc(projectCollectionRef, { 
+    addDocumentNonBlocking(projectCollectionRef, { 
       ...data, 
       studentId: targetUser.id, 
       ownerType: 'student',
@@ -326,17 +317,17 @@ function EditProfilePageComponent() {
       invitedStudentIds: [] 
     });
     projectForm.reset();
-    triggerTalentScoreUpdate(targetUser.id); 
     toast({ title: "Layihə əlavə edildi" });
+    triggerTalentScoreUpdate(targetUser.id); 
   };
   
-  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = async (data) => {
+  const onAchievementSubmit: SubmitHandler<z.infer<typeof achievementSchema>> = (data) => {
     if (!targetUser || !firestore) return;
     const achievementCollectionRef = collection(firestore, `achievements`);
-     await addDoc(achievementCollectionRef, { ...data, studentId: targetUser.id });
+    addDocumentNonBlocking(achievementCollectionRef, { ...data, studentId: targetUser.id });
     achievementForm.reset();
-    triggerTalentScoreUpdate(targetUser.id);
     toast({ title: "Nailiyyət əlavə edildi" });
+    triggerTalentScoreUpdate(targetUser.id);
   };
   
  const onCertificateSubmit: SubmitHandler<z.infer<typeof certificateSchema>> = async (data) => {
@@ -365,8 +356,8 @@ function EditProfilePageComponent() {
     certificateForm.reset();
     if(fileInput) fileInput.value = '';
     
-    triggerTalentScoreUpdate(targetUser.id);
     toast({ title: "Sertifikat əlavə edildi" });
+    triggerTalentScoreUpdate(targetUser.id);
   };
 
   const handleDelete = async (docId: string, itemType: 'project' | 'achievement' | 'certificate') => {
@@ -386,10 +377,10 @@ function EditProfilePageComponent() {
             break;
       }
       
-      await deleteDocumentNonBlocking(docRef);
+      deleteDocumentNonBlocking(docRef);
 
-      triggerTalentScoreUpdate(targetUser.id);
       toast({ title: "Element silindi", description: "Seçilmiş element uğurla silindi." });
+      triggerTalentScoreUpdate(targetUser.id);
   };
 
   const handleSkillAdd = async () => {
@@ -853,3 +844,5 @@ export default function EditProfilePage() {
     </Suspense>
   )
 }
+
+    
