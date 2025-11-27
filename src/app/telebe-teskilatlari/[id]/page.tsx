@@ -53,7 +53,7 @@ export default function StudentOrgDetailsPage() {
     return <OrgDetailsLoading />;
   }
 
-  if (!organization) {
+  if (!organization || organization.role !== 'student-organization') {
     return <div className="text-center py-20">Tələbə təşkilatı tapılmadı.</div>;
   }
 
