@@ -64,7 +64,7 @@ export default function HomePage() {
   const studentOrgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "student-organizations"), where("status", "==", "təsdiqlənmiş")) : null, [firestore]);
   const categoriesQuery = useMemoFirebase(() => firestore ? collection(firestore, "categories") : null, [firestore]);
   const newsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'news'), orderBy('createdAt', 'desc'), limit(3)) : null, [firestore]);
-  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc'), limit(3)) : null, [firestore]);
+  const projectsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "projects"), orderBy('status', 'desc')) : null, [firestore]);
   const achievementsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'achievements') : null, [firestore]);
 
 
