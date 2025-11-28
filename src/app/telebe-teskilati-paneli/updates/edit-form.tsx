@@ -85,7 +85,7 @@ export default function OrgUpdateEditForm({ initialData, onSuccess, organization
           ...values,
           updatedAt: serverTimestamp(),
         };
-        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, initialData.id);
+        const subCollectionDocRef = doc(firestore, `users/${organization.id}/updates`, initialData.id);
         const topLevelDocRef = doc(firestore, 'student-org-updates', initialData.id);
         
         batch.update(subCollectionDocRef, updateData);
@@ -104,7 +104,7 @@ export default function OrgUpdateEditForm({ initialData, onSuccess, organization
           createdAt: serverTimestamp(),
         };
         
-        const subCollectionDocRef = doc(firestore, `student-organizations/${organization.id}/updates`, newUpdateId);
+        const subCollectionDocRef = doc(firestore, `users/${organization.id}/updates`, newUpdateId);
         const topLevelDocRef = doc(firestore, 'student-org-updates', newUpdateId);
 
         batch.set(subCollectionDocRef, newUpdateData);
