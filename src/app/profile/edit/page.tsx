@@ -38,7 +38,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -247,17 +246,15 @@ function EditProfilePageComponent() {
 
   const [skillInput, setSkillInput] = useState('');
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('Başlanğıc');
+  
+  const isStudent = targetUser?.role === 'student';
+  const isOrg = targetUser?.role === 'student-organization';
 
-  const studentForm = useForm<z.infer<typeof studentProfileSchema>>({
-    resolver: zodResolver(studentProfileSchema),
+  const profileForm = useForm({
+    resolver: zodResolver(isStudent ? studentProfileSchema : organizationProfileSchema),
     mode: 'onChange',
   });
   
-  const organizationForm = useForm<z.infer<typeof organizationProfileSchema>>({
-    resolver: zodResolver(organizationProfileSchema),
-    mode: 'onChange',
-  });
-
   const projectForm = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -360,9 +357,9 @@ function EditProfilePageComponent() {
 
   useEffect(() => {
     if (targetUser) {
-        if (targetUser.role === 'student') {
+        if (isStudent) {
             const student = targetUser as Student;
-            studentForm.reset({
+            profileForm.reset({
                 firstName: student.firstName || '',
                 lastName: student.lastName || '',
                 major: student.major || '',
@@ -380,16 +377,16 @@ function EditProfilePageComponent() {
                 youtubeURL: student.youtubeURL || '',
             });
              setLocalProfilePicUrl(student.profilePictureUrl || null);
-        } else if (targetUser.role === 'student-organization') {
+        } else if (isOrg) {
             const org = targetUser as StudentOrganization;
-            organizationForm.reset({
+            profileForm.reset({
                 name: org.name || '',
                 description: org.description || '',
             });
             setLocalProfilePicUrl(org.logoUrl || null);
         }
     }
-  }, [targetUser, studentForm, organizationForm]);
+  }, [targetUser, profileForm, isStudent, isOrg]);
 
   const handleFileUpload = async (
     file: File | Blob,
@@ -445,13 +442,11 @@ function EditProfilePageComponent() {
     }
   };
 
-  const onProfileSubmit = async (
-    data: z.infer<typeof studentProfileSchema> | z.infer<typeof organizationProfileSchema>
-  ) => {
+  const onProfileSubmit = async (data: any) => {
     if (!targetUser || !userDocRef) return;
     setIsSaving(true);
     
-    let finalProfilePicUrl = targetUser.role === 'student' ? (targetUser as Student).profilePictureUrl : (targetUser as StudentOrganization).logoUrl;
+    let finalProfilePicUrl = isStudent ? (targetUser as Student).profilePictureUrl : (targetUser as StudentOrganization).logoUrl;
 
     if (newProfilePicBlob) {
         const uploadedUrl = await handleFileUpload(newProfilePicBlob, 'sekil');
@@ -463,12 +458,12 @@ function EditProfilePageComponent() {
         }
     }
     
-    let payload = {};
-    if (targetUser.role === 'student') {
+    let payload;
+    if (isStudent) {
         payload = {
             ...data,
             profilePictureUrl: finalProfilePicUrl,
-            gpa: Number((data as Student).gpa) || 0,
+            gpa: Number(data.gpa) || 0,
         };
     } else {
          payload = {
@@ -490,7 +485,7 @@ function EditProfilePageComponent() {
     toast({ title: 'Profil məlumatları yadda saxlanıldı.' });
     setIsSaving(false);
     setNewProfilePicBlob(null);
-    if(targetUser.role === 'student') {
+    if(isStudent) {
         triggerTalentScoreUpdate(targetUser.id);
     }
   };
@@ -623,13 +618,13 @@ function EditProfilePageComponent() {
     const trimmedInput = skillInput.trim();
     if (trimmedInput) {
       const newSkill: Skill = { name: trimmedInput, level: skillLevel };
-      const currentSkills = studentForm.getValues('skills') || [];
+      const currentSkills = profileForm.getValues('skills') || [];
       if (
         !currentSkills.some(
           (s) => s?.name?.toLowerCase() === newSkill.name.toLowerCase()
         )
       ) {
-        studentForm.setValue('skills', [...currentSkills, newSkill], {
+        profileForm.setValue('skills', [...currentSkills, newSkill], {
           shouldValidate: true,
           shouldDirty: true,
         });
@@ -646,9 +641,9 @@ function EditProfilePageComponent() {
   };
 
   const handleSkillRemove = (skillToRemove: string) => {
-    studentForm.setValue(
+    profileForm.setValue(
       'skills',
-      (studentForm.getValues('skills') || []).filter(
+      (profileForm.getValues('skills') || []).filter(
         (skill) => skill.name !== skillToRemove
       ),
       { shouldValidate: true, shouldDirty: true }
@@ -670,10 +665,6 @@ function EditProfilePageComponent() {
     `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
   
   const getOrgInitials = (name?: string) => name ? name.charAt(0) : '';
-
-  const isStudent = targetUser.role === 'student';
-  const student = isStudent ? (targetUser as Student) : null;
-  const organization = !isStudent ? (targetUser as StudentOrganization) : null;
 
   return (
     <>
@@ -734,176 +725,133 @@ function EditProfilePageComponent() {
         </div>
 
         <div className="space-y-8">
-            {isStudent ? (
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <UserIcon /> Şəxsi Məlumatlar
-                        </CardTitle>
-                        <CardDescription>
-                            Əsas profil məlumatlarınızı, bacarıqlarınızı və sosial media hesablarınızı yeniləyin.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form {...studentForm}>
-                            <form
-                            onSubmit={studentForm.handleSubmit(onProfileSubmit)}
-                            className="space-y-8"
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <UserIcon /> Şəxsi Məlumatlar
+                    </CardTitle>
+                    <CardDescription>
+                       {isStudent ? 'Əsas profil məlumatlarınızı, bacarıqlarınızı və sosial media hesablarınızı yeniləyin.' : 'Təşkilatınızın əsas məlumatlarını yeniləyin.'}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...profileForm}>
+                        <form
+                        onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+                        className="space-y-8"
+                        >
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+                            <div className="md:col-span-1 flex flex-col items-center gap-4">
+                            <Avatar className="h-32 w-32">
+                                <AvatarImage src={localProfilePicUrl || undefined} />
+                                <AvatarFallback>
+                                    {isStudent ? getInitials((targetUser as Student).firstName, (targetUser as Student).lastName) : getOrgInitials((targetUser as StudentOrganization).name)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => profilePictureInputRef.current?.click()}
+                                disabled={isUploading}
                             >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-1 flex flex-col items-center gap-4">
-                                <Avatar className="h-32 w-32">
-                                    <AvatarImage src={localProfilePicUrl || undefined} />
-                                    <AvatarFallback>
-                                        {student ? getInitials(student.firstName, student.lastName) : ''}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => profilePictureInputRef.current?.click()}
-                                    disabled={isUploading}
-                                >
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    {isUploading ? 'Yüklənir...' : 'Dəyiş'}
-                                </Button>
-                                <Input
-                                    ref={profilePictureInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={onProfilePictureChange}
-                                />
-                                </div>
-                                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <FormField name="firstName" control={studentForm.control} render={({ field }) => (
-                                    <FormItem><FormLabel>Ad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField name="lastName" control={studentForm.control} render={({ field }) => (
-                                    <FormItem><FormLabel>Soyad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField name="major" control={studentForm.control} render={({ field }) => (
-                                    <FormItem className="sm:col-span-2"><FormLabel>İxtisas</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField name="courseYear" control={studentForm.control} render={({ field }) => (
-                                    <FormItem><FormLabel>Təhsil ili</FormLabel><Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 1)}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{[1, 2, 3, 4, 5, 6].map((y) => (<SelectItem key={y} value={String(y)}>{y}-ci kurs</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                                )} />
-                                 <FormField name="gpa" control={studentForm.control} render={({ field }) => (
-                                    <FormItem><FormLabel>ÜOMG (Könüllü)</FormLabel><FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ''} placeholder="Məs: 85.5" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                </div>
+                                <Upload className="mr-2 h-4 w-4" />
+                                {isUploading ? 'Yüklənir...' : (isStudent ? 'Şəkli Dəyiş' : 'Loqonu Dəyiş')}
+                            </Button>
+                            <Input
+                                ref={profilePictureInputRef}
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={onProfilePictureChange}
+                            />
                             </div>
-                            
-                            <Separator />
-                            
-                            <FormField name="skills" control={studentForm.control} render={() => (
-                                <FormItem>
-                                    <FormLabel className="text-lg font-medium">Bacarıqlar</FormLabel>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
-                                    <div className="flex-grow w-full"><FormLabel className="text-xs text-muted-foreground">Bacarıq adı</FormLabel><Input ref={skillInputRef} value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => {if (e.key === 'Enter') {e.preventDefault(); handleSkillAdd();}}} placeholder="Məs: Python, Figma" /></div>
-                                    <div className="w-full sm:w-auto"><FormLabel className="text-xs text-muted-foreground">Səviyyə</FormLabel><Select value={skillLevel} onValueChange={(value) => setSkillLevel(value as SkillLevel)}><SelectTrigger><SelectValue placeholder="Səviyyə seçin" /></SelectTrigger><SelectContent>{SKILL_LEVELS.map((level) => (<SelectItem key={level} value={level}>{level}</SelectItem>))}</SelectContent></Select></div>
-                                    <Button type="button" onClick={handleSkillAdd} className="w-full sm:w-auto shrink-0">Əlavə et</Button>
-                                    </div>
-                                    <FormMessage />
-                                    <div className="flex flex-wrap gap-2 pt-2 min-h-[2.5rem]">
-                                    {studentForm.watch('skills')?.map((skill) => (
-                                        <Badge key={skill.name} variant="secondary" className="flex items-center gap-2 text-sm">{skill.name}{' '}<span className="text-xs opacity-70">({skill.level})</span><button type="button" onClick={() => handleSkillRemove(skill.name)} className="rounded-full hover:bg-muted-foreground/20 p-0.5"><X className="h-3 w-3" /></button></Badge>
-                                    ))}
-                                    </div>
-                                </FormItem>
-                            )} />
-
-                            <Separator />
-
-                            <FormField control={studentForm.control} name="successStory" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-lg font-medium">Uğur Hekayəsi (Könüllü)<span className="block text-xs font-normal text-muted-foreground mt-1">Bu hekayə ana səhifədə nümayiş etdirilə bilər.</span></FormLabel>
-                                    <FormControl><Textarea placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..." className="min-h-[100px]" {...field} /></FormControl><FormMessage />
-                                </FormItem>
-                            )} />
-
-                            <Separator />
-
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-medium">Sosial Linklər</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField name="linkedInURL" control={studentForm.control} render={({ field }) => (<FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField name="githubURL" control={studentForm.control} render={({ field }) => (<FormItem><FormLabel>GitHub URL</FormLabel><FormControl><Input placeholder="https://github.com/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField name="portfolioURL" control={studentForm.control} render={({ field }) => (<FormItem><FormLabel>Portfolio URL</FormLabel><FormControl><Input placeholder="https://sizin-saytiniz.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField name="behanceURL" control={studentForm.control} render={({ field }) => (<FormItem><FormLabel>Behance URL</FormLabel><FormControl><Input placeholder="https://behance.net/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                </div>
-                            </div>
-                            
-                            <div className="flex justify-end">
-                                <Button type="submit" disabled={isSaving || isUploading}>
-                                    {isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
-                                </Button>
-                            </div>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-            ) : (
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <UserIcon /> Təşkilat Məlumatları
-                        </CardTitle>
-                        <CardDescription>
-                            Təşkilatınızın əsas məlumatlarını yeniləyin.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form {...organizationForm}>
-                             <form
-                            onSubmit={organizationForm.handleSubmit(onProfileSubmit)}
-                            className="space-y-8"
-                            >
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-1 flex flex-col items-center gap-4">
-                                <Avatar className="h-32 w-32">
-                                    <AvatarImage src={localProfilePicUrl || undefined} />
-                                    <AvatarFallback>
-                                        {organization ? getOrgInitials(organization.name) : ''}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => profilePictureInputRef.current?.click()}
-                                    disabled={isUploading}
-                                >
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    {isUploading ? 'Yüklənir...' : 'Loqo Dəyiş'}
-                                </Button>
-                                <Input
-                                    ref={profilePictureInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={onProfilePictureChange}
-                                />
-                                </div>
-                                <div className="md:col-span-2 space-y-6">
-                                    <FormField name="name" control={organizationForm.control} render={({ field }) => (
-                                        <FormItem><FormLabel>Təşkilat Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            {isStudent ? (
+                                <>
+                                    <FormField name="firstName" control={profileForm.control} render={({ field }) => (
+                                        <FormItem><FormLabel>Ad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
-                                    <FormField name="description" control={organizationForm.control} render={({ field }) => (
-                                        <FormItem><FormLabel>Təsvir</FormLabel><FormControl><Textarea rows={5} {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormField name="lastName" control={profileForm.control} render={({ field }) => (
+                                        <FormItem><FormLabel>Soyad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
-                                </div>
+                                    <FormField name="major" control={profileForm.control} render={({ field }) => (
+                                        <FormItem className="sm:col-span-2"><FormLabel>İxtisas</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField name="courseYear" control={profileForm.control} render={({ field }) => (
+                                        <FormItem><FormLabel>Təhsil ili</FormLabel><Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 1)}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{[1, 2, 3, 4, 5, 6].map((y) => (<SelectItem key={y} value={String(y)}>{y}-ci kurs</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField name="gpa" control={profileForm.control} render={({ field }) => (
+                                        <FormItem><FormLabel>ÜOMG (Könüllü)</FormLabel><FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ''} placeholder="Məs: 85.5" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </>
+                            ) : (
+                                <>
+                                    <FormField name="name" control={profileForm.control} render={({ field }) => (
+                                        <FormItem className="sm:col-span-2"><FormLabel>Təşkilat Adı</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField name="description" control={profileForm.control} render={({ field }) => (
+                                        <FormItem className="sm:col-span-2"><FormLabel>Təsvir</FormLabel><FormControl><Textarea rows={5} {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </>
+                            )}
                             </div>
-                             <div className="flex justify-end">
-                                <Button type="submit" disabled={isSaving || isUploading}>
-                                    {isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
-                                </Button>
-                            </div>
-                           </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-            )}
+                        </div>
+                        
+                        {isStudent && (
+                            <>
+                                <Separator />
+                                <FormField name="skills" control={profileForm.control} render={() => (
+                                    <FormItem>
+                                        <FormLabel className="text-lg font-medium">Bacarıqlar</FormLabel>
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
+                                        <div className="flex-grow w-full"><FormLabel className="text-xs text-muted-foreground">Bacarıq adı</FormLabel><Input ref={skillInputRef} value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => {if (e.key === 'Enter') {e.preventDefault(); handleSkillAdd();}}} placeholder="Məs: Python, Figma" /></div>
+                                        <div className="w-full sm:w-auto"><FormLabel className="text-xs text-muted-foreground">Səviyyə</FormLabel><Select value={skillLevel} onValueChange={(value) => setSkillLevel(value as SkillLevel)}><SelectTrigger><SelectValue placeholder="Səviyyə seçin" /></SelectTrigger><SelectContent>{SKILL_LEVELS.map((level) => (<SelectItem key={level} value={level}>{level}</SelectItem>))}</SelectContent></Select></div>
+                                        <Button type="button" onClick={handleSkillAdd} className="w-full sm:w-auto shrink-0">Əlavə et</Button>
+                                        </div>
+                                        <FormMessage />
+                                        <div className="flex flex-wrap gap-2 pt-2 min-h-[2.5rem]">
+                                        {profileForm.watch('skills')?.map((skill) => (
+                                            <Badge key={skill.name} variant="secondary" className="flex items-center gap-2 text-sm">{skill.name}{' '}<span className="text-xs opacity-70">({skill.level})</span><button type="button" onClick={() => handleSkillRemove(skill.name)} className="rounded-full hover:bg-muted-foreground/20 p-0.5"><X className="h-3 w-3" /></button></Badge>
+                                        ))}
+                                        </div>
+                                    </FormItem>
+                                )} />
 
+                                <Separator />
+
+                                <FormField control={profileForm.control} name="successStory" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-lg font-medium">Uğur Hekayəsi (Könüllü)
+                                            <span className="block text-xs font-normal text-muted-foreground mt-1">Bu hekayə ana səhifədə nümayiş etdirilə bilər.</span>
+                                        </FormLabel>
+                                        <FormControl><Textarea placeholder="Platforma sayəsində qazandığınız bir uğuru və ya təcrübəni burada paylaşın..." className="min-h-[100px]" {...field} /></FormControl><FormMessage />
+                                    </FormItem>
+                                )} />
+
+                                <Separator />
+
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-medium">Sosial Linklər</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField name="linkedInURL" control={profileForm.control} render={({ field }) => (<FormItem><FormLabel>LinkedIn URL</FormLabel><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField name="githubURL" control={profileForm.control} render={({ field }) => (<FormItem><FormLabel>GitHub URL</FormLabel><FormControl><Input placeholder="https://github.com/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField name="portfolioURL" control={profileForm.control} render={({ field }) => (<FormItem><FormLabel>Portfolio URL</FormLabel><FormControl><Input placeholder="https://sizin-saytiniz.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField name="behanceURL" control={profileForm.control} render={({ field }) => (<FormItem><FormLabel>Behance URL</FormLabel><FormControl><Input placeholder="https://behance.net/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                        
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={isSaving || isUploading}>
+                                {isSaving ? 'Yadda saxlanılır...' : 'Dəyişiklikləri Yadda Saxla'}
+                            </Button>
+                        </div>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+            
           {isStudent && (
             <>
                 {/* Projects Card */}
