@@ -125,6 +125,9 @@ export default function OrgUpdatesPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
+                                         <DropdownMenuItem asChild>
+                                            <Link href={`/updates/${item.id}`} target="_blank">Yeniliyə bax</Link>
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem asChild>
                                             <Link href={`/telebe-teskilati-paneli/updates/edit/${item.id}`}>Redaktə Et</Link>
                                         </DropdownMenuItem>

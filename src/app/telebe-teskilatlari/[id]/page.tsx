@@ -34,11 +34,10 @@ function OrgDetailsLoading() {
 export default function StudentOrgDetailsPage() {
   const { id } = useParams();
   const firestore = useFirestore();
-  const { user: currentUser } = useAuth();
 
   const orgId = typeof id === 'string' ? id : '';
 
-  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'student-organizations', orgId) : null), [firestore, orgId]);
+  const orgDocRef = useMemoFirebase(() => (firestore && orgId ? doc(firestore, 'users', orgId) : null), [firestore, orgId]);
   const { data: organization, isLoading: orgLoading } = useDoc<StudentOrganization>(orgDocRef);
   
   const updatesQuery = useMemoFirebase(
@@ -91,7 +90,7 @@ export default function StudentOrgDetailsPage() {
                 <CardContent className="space-y-6">
                     {updates && updates.length > 0 ? (
                         updates.map(update => (
-                             <Link key={update.id} href={`/telebe-teskilatlari/yenilikler/${update.id}`} className="block group">
+                             <Link key={update.id} href={`/updates/${update.id}`} className="block group">
                                 <Card className="hover:border-primary/50 transition-colors">
                                     {update.coverImageUrl && (
                                         <div className="relative w-full h-40 rounded-t-lg overflow-hidden">

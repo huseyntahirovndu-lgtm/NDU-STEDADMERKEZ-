@@ -96,8 +96,10 @@ export default function StudentOrganizationLayout({
             </nav>
           </div>
           <div className="mt-auto p-4 border-t">
-             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 disabled">
-                <Settings className="h-4 w-4" /> Profil Ayarları (Tezliklə)
+             <Button variant="ghost" size="sm" className="w-full justify-start gap-2" asChild>
+                <Link href="/profile/edit">
+                  <Settings className="h-4 w-4" /> Profil Ayarları
+                </Link>
               </Button>
           </div>
         </div>
@@ -138,8 +140,10 @@ export default function StudentOrganizationLayout({
                 ))}
               </nav>
                 <div className="mt-auto p-4 border-t">
-                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 disabled">
-                    <Settings className="h-4 w-4" /> Profil Ayarları (Tezliklə)
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2" asChild>
+                    <Link href="/profile/edit">
+                      <Settings className="h-4 w-4" /> Profil Ayarları
+                    </Link>
                   </Button>
                 </div>
             </SheetContent>
