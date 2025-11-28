@@ -23,6 +23,10 @@
           "description": "The email address of the student.",
           "format": "email"
         },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The phone number of the student."
+        },
         "faculty": {
           "type": "string",
           "description": "The faculty the student belongs to."
@@ -58,6 +62,7 @@
         "firstName",
         "lastName",
         "email",
+        "phoneNumber",
         "faculty",
         "major",
         "courseYear"

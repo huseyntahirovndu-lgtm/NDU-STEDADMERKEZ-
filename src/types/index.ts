@@ -39,6 +39,9 @@ export interface Project {
   link?: string;
   teamMembers?: string[];
   status: 'davam edir' | 'tamamlanıb';
+  teamMemberIds?: string[];
+  invitedStudentIds?: string[];
+  ownerId?: string;
 }
 
 export interface Achievement {
@@ -75,6 +78,7 @@ export interface Student extends BaseUser {
   role: 'student';
   firstName: string;
   lastName: string;
+  phoneNumber: string;
   faculty: string;
   major: string;
   courseYear: number;
@@ -98,6 +102,14 @@ export interface Student extends BaseUser {
   status: StudentStatus;
   successStory?: string;
 }
+
+export interface Organization extends BaseUser {
+  role: 'organization';
+  name: string;
+  sector: string;
+  savedStudentIds: string[];
+}
+
 
 export interface Admin extends BaseUser {
     role: 'admin';
@@ -159,4 +171,4 @@ export interface Invitation {
     createdAt: Date;
 }
 
-export type AppUser = Student | StudentOrganization | Admin;
+export type AppUser = Student | StudentOrganization | Admin | Organization;

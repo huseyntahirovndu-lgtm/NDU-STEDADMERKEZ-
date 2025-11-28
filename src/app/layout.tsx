@@ -2,10 +2,27 @@
 import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
-import { SessionProvider } from '@/hooks/use-auth';
+import { SessionProvider, useAuth } from '@/hooks/use-auth';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { useEffect, useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Student } from '@/types';
+import { updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 const siteConfig = {
   name: "İstedad Mərkəzi - Naxçıvan Dövlət Universiteti",
@@ -14,6 +31,81 @@ const siteConfig = {
   description: "Naxçıvan Dövlət Universitetinin istedadlı tələbələrini kəşf edin. Potensialı reallığa çevirən platforma.",
   keywords: ["Naxçıvan Dövlət Universiteti", "İstedad Mərkəzi", "tələbə", "karyera", "istedad", "layihə", "NDU"],
 };
+
+function PhoneNumberModal() {
+  const { user, updateUser } = useAuth();
+  const firestore = useFirestore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user && user.role === 'student' && !user.phoneNumber) {
+      setIsOpen(true);
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user || !firestore) return;
+    if (phoneNumber.trim().length < 5) {
+      toast({
+        variant: 'destructive',
+        title: 'Xəta',
+        description: 'Zəhmət olmasa, etibarlı bir əlaqə nömrəsi daxil edin.',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    const userDocRef = doc(firestore, 'users', user.id);
+    const updatedData = { phoneNumber };
+    
+    await updateDocumentNonBlocking(userDocRef, updatedData);
+    updateUser(updatedData); // Update local auth context
+    
+    toast({
+      title: 'Uğurlu',
+      description: 'Əlaqə nömrəniz yadda saxlanıldı.',
+    });
+    
+    setIsSaving(false);
+    setIsOpen(false);
+  };
+
+  return (
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle>Əlaqə Nömrəsi</DialogTitle>
+          <DialogDescription>
+            Platformadan tam istifadə etmək üçün zəhmət olmasa, əlaqə nömrənizi daxil edin. Bu məlumat məxfi saxlanılacaq.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="phone-number" className="text-right">
+              Nömrə
+            </Label>
+            <Input
+              id="phone-number"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="col-span-3"
+              placeholder="+994..."
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Yadda saxlanılır...' : 'Yadda Saxla'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function RootLayout({
   children,
@@ -53,6 +145,7 @@ export default function RootLayout({
       <body className="font-body bg-background antialiased">
         <FirebaseClientProvider>
           <SessionProvider>
+            <PhoneNumberModal />
             {isAuthPage ? (
               <main className="flex min-h-screen items-center justify-center bg-background p-4">
                 {children}

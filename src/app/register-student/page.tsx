@@ -50,6 +50,9 @@ const formSchema = z.object({
   email: z.string().email({
     message: 'Etibarlı bir e-poçt ünvanı daxil edin.'
   }),
+  phoneNumber: z.string().min(5, {
+    message: 'Əlaqə nömrəsini daxil edin.'
+  }),
   password: z.string().min(6, {
     message: 'Şifrə ən azı 6 simvoldan ibarət olmalıdır.'
   }),
@@ -84,6 +87,7 @@ export default function RegisterStudentPage() {
       firstName: '',
       lastName: '',
       email: '',
+      phoneNumber: '',
       password: '',
       faculty: '',
       major: '',
@@ -101,6 +105,7 @@ export default function RegisterStudentPage() {
       firstName: values.firstName,
       lastName: values.lastName,
       email: values.email,
+      phoneNumber: values.phoneNumber,
       faculty: values.faculty,
       major: values.major,
       courseYear: values.courseYear,
@@ -190,7 +195,21 @@ export default function RegisterStudentPage() {
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Əlaqə nömrəsi</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+994..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+             <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
@@ -203,7 +222,6 @@ export default function RegisterStudentPage() {
                   </FormItem>
                 )}
               />
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
